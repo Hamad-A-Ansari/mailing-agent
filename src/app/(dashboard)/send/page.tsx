@@ -14,11 +14,14 @@ export default async function SendPage() {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold">Send Emails</h1>
-      <p className="mt-2 text-muted-foreground">
-        Select recipients, choose a template category, and send emails.
-      </p>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Send Emails</h1>
+        <p className="text-muted-foreground">
+          Select recipients, pick a template category, review, and send.
+        </p>
+      </div>
+      <p className="text-muted-foreground">Send wizard will be implemented in Task 9.</p>
     </div>
   );
 }
