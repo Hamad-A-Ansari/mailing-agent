@@ -1,8 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getUserRole } from "@/lib/auth";
+import { getUserRole, isOwner } from "@/lib/auth";
 import { Sidebar } from "@/components/sidebar";
 import { UserButton } from "@clerk/nextjs";
+import { headers } from "next/headers";
 
 // Routes restricted to owner only
 const ownerOnlyPaths = ["/templates", "/subject-lines", "/send", "/activity"];
@@ -19,6 +20,15 @@ export default async function DashboardLayout({
   }
 
   const userRole = getUserRole(userId);
+
+  // Redirect non-owners from restricted routes
+  if (!isOwner(userId)) {
+    const headerList = await headers();
+    const pathname = headerList.get("x-pathname") || headerList.get("x-invoke-path") || "";
+    if (ownerOnlyPaths.some((p) => pathname.startsWith(p)) || pathname === "/") {
+      redirect("/recruiters");
+    }
+  }
 
   return (
     <div className="flex h-screen overflow-hidden">

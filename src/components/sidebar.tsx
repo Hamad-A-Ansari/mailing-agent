@@ -73,8 +73,7 @@ export function Sidebar({ userRole }: SidebarProps) {
     <aside className="flex h-full w-64 flex-col border-r bg-background">
       <div className="flex h-14 items-center border-b px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
-          <Mail className="h-5 w-5" />
-          <span>RecruiterReach</span>
+          <span>Switch FAANG</span>
         </Link>
       </div>
       <nav className="flex-1 space-y-1 p-3">
