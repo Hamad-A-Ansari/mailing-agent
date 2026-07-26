@@ -35,6 +35,7 @@ type RecruiterWithEmails = Recruiter & { recruiter_emails: RecruiterEmail[] };
 
 interface RecruiterTableProps {
   userRole: "owner" | "viewer";
+  isDemo?: boolean;
 }
 
 const statusColors: Record<RecruiterStatus, string> = {
@@ -44,7 +45,7 @@ const statusColors: Record<RecruiterStatus, string> = {
   "No Response": "bg-gray-100 text-gray-800",
 };
 
-export function RecruiterTable({ userRole }: RecruiterTableProps) {
+export function RecruiterTable({ userRole, isDemo = false }: RecruiterTableProps) {
   const [recruiters, setRecruiters] = useState<RecruiterWithEmails[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -170,6 +171,7 @@ export function RecruiterTable({ userRole }: RecruiterTableProps) {
     <div className="space-y-4">
       <RecruiterFilters
         userRole={userRole}
+        isDemo={isDemo}
         companies={companies}
         onSearchChange={(s) => { setSearch(s); setPage(1); }}
         onCompanyChange={(c) => { setCompany(c); setPage(1); }}

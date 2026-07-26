@@ -14,6 +14,7 @@ import { Plus, Upload, Download, Search } from "lucide-react";
 
 interface RecruiterFiltersProps {
   userRole: "owner" | "viewer";
+  isDemo?: boolean;
   companies: string[];
   onSearchChange: (search: string) => void;
   onCompanyChange: (company: string | null) => void;
@@ -25,6 +26,7 @@ interface RecruiterFiltersProps {
 
 export function RecruiterFilters({
   userRole,
+  isDemo = false,
   companies,
   onSearchChange,
   onCompanyChange,
@@ -94,10 +96,12 @@ export function RecruiterFilters({
             <Upload className="mr-1 h-4 w-4" />
             Bulk Upload
           </Button>
-          <Button onClick={onExportClick} variant="outline" size="sm">
-            <Download className="mr-1 h-4 w-4" />
-            Export
-          </Button>
+          {!isDemo && (
+            <Button onClick={onExportClick} variant="outline" size="sm">
+              <Download className="mr-1 h-4 w-4" />
+              Export
+            </Button>
+          )}
         </>
       )}
     </div>

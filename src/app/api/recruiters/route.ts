@@ -27,7 +27,8 @@ export async function GET(request: Request) {
 
   let query = supabase
     .from("recruiters")
-    .select("*, recruiter_emails(*)", { count: "exact" });
+    .select("*, recruiter_emails(*)", { count: "exact" })
+    .eq("user_id", userId);
 
   if (company) {
     query = query.eq("company", company);

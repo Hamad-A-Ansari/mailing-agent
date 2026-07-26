@@ -1,10 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
-import { isOwner } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 /**
  * GET /api/stats
- * Dashboard statistics. Owner only.
+ * Dashboard statistics. Scoped per user.
  */
 export async function GET() {
   const { userId } = await auth();
@@ -17,12 +16,14 @@ export async function GET() {
   // Total recruiters
   const { count: totalRecruiters } = await supabase
     .from("recruiters")
-    .select("*", { count: "exact", head: true });
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId);
 
   // Total emails sent
   const { count: totalEmailsSent } = await supabase
     .from("email_logs")
     .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
     .eq("status", "sent");
 
   // Emails sent today
@@ -31,6 +32,7 @@ export async function GET() {
   const { count: emailsToday } = await supabase
     .from("email_logs")
     .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
     .eq("status", "sent")
     .gte("sent_at", today.toISOString());
 
@@ -41,6 +43,7 @@ export async function GET() {
   const { count: emailsThisWeek } = await supabase
     .from("email_logs")
     .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
     .eq("status", "sent")
     .gte("sent_at", weekAgo.toISOString());
 

@@ -22,6 +22,7 @@ export async function GET(request: Request) {
   let query = supabase
     .from("email_templates")
     .select("*")
+    .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
   if (category) {

@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getUserRole } from "@/lib/auth";
+import { isOwner } from "@/lib/auth";
 import { RecruiterTable } from "@/components/recruiters/recruiter-table";
 
 export default async function RecruitersPage() {
@@ -10,8 +10,6 @@ export default async function RecruitersPage() {
     redirect("/sign-in");
   }
 
-  const userRole = getUserRole(userId);
-
   return (
     <div className="space-y-6">
       <div>
@@ -20,7 +18,7 @@ export default async function RecruitersPage() {
           Manage your recruiter contacts and track outreach status.
         </p>
       </div>
-      <RecruiterTable userRole={userRole} />
+      <RecruiterTable userRole="owner" isDemo={!isOwner(userId)} />
     </div>
   );
 }

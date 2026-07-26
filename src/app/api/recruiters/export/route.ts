@@ -14,6 +14,11 @@ export async function GET(request: Request) {
     return Response.json({ error: "Not authorized" }, { status: 401 });
   }
 
+  // Only owner can export
+  if (!isOwner(userId)) {
+    return Response.json({ error: "Export disabled in demo mode" }, { status: 403 });
+  }
+
   const { searchParams } = new URL(request.url);
   const company = searchParams.get("company");
   const status = searchParams.get("status");
@@ -24,6 +29,7 @@ export async function GET(request: Request) {
   let query = supabase
     .from("recruiters")
     .select("*, recruiter_emails(*)")
+    .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
   if (company) query = query.eq("company", company);

@@ -21,6 +21,7 @@ export async function GET(request: Request) {
   const { data, error, count } = await supabase
     .from("activity_logs")
     .select("*", { count: "exact" })
+    .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .range((page - 1) * pageSize, page * pageSize - 1);
 
