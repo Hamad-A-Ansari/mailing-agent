@@ -1,6 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { isOwner } from "@/lib/auth";
 import { TemplateList } from "@/components/templates/template-list";
 
 export default async function TemplatesPage() {
@@ -8,10 +7,6 @@ export default async function TemplatesPage() {
 
   if (!userId) {
     redirect("/sign-in");
-  }
-
-  if (!isOwner(userId)) {
-    redirect("/recruiters");
   }
 
   return (
