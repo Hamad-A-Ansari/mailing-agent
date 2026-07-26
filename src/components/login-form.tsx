@@ -22,9 +22,8 @@ export function LoginForm({
     setLoading(true)
     setError(null)
     try {
-      await (signIn as unknown as { sso: (params: { strategy: string; redirectUrl: string }) => Promise<void> }).sso({
+      await (signIn as unknown as { sso: (params: { strategy: string }) => Promise<void> }).sso({
         strategy: "oauth_google",
-        redirectUrl: "/",
       })
     } catch (err) {
       console.error("Sign-in error:", err)
