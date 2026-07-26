@@ -7,6 +7,7 @@ import { z } from "zod";
 const sendEmailsSchema = z.object({
   recruiterIds: z.array(z.string()).min(1).max(50),
   templateCategory: z.enum(["outreach", "follow-up", "referral"]),
+  emailTarget: z.enum(["all", "company", "personal"]).default("all"),
 });
 
 /**
@@ -33,7 +34,8 @@ export async function POST(request: Request) {
     const result = await sendBulkOutreach(
       userId,
       parsed.data.recruiterIds,
-      parsed.data.templateCategory
+      parsed.data.templateCategory,
+      parsed.data.emailTarget
     );
 
     await logActivity(userId, "sent_bulk_emails", {

@@ -42,6 +42,7 @@ export default function SendPage() {
   const [recruiters, setRecruiters] = useState<RecruiterWithEmails[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [category, setCategory] = useState<TemplateCategory | null>(null);
+  const [emailTarget, setEmailTarget] = useState<"all" | "company" | "personal">("all");
   const [templateCounts, setTemplateCounts] = useState<Record<string, number>>({});
   const [subjectLineCount, setSubjectLineCount] = useState(0);
   const [defaultResume, setDefaultResume] = useState<string | null>(null);
@@ -115,6 +116,7 @@ export default function SendPage() {
       body: JSON.stringify({
         recruiterIds: [...selected],
         templateCategory: category,
+        emailTarget,
       }),
     });
 
@@ -300,6 +302,19 @@ export default function SendPage() {
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Active subject lines</span>
                 <span className="font-medium">{subjectLineCount}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Send to</span>
+                <Select value={emailTarget} onValueChange={(v) => setEmailTarget(v as "all" | "company" | "personal")}>
+                  <SelectTrigger className="w-[180px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All emails</SelectItem>
+                    <SelectItem value="company">Company emails only</SelectItem>
+                    <SelectItem value="personal">Personal emails only</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Resume attachment</span>

@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Trash2, Plus } from "lucide-react";
-import { injectVariables, sampleData, templateVariables } from "@/lib/email/template-engine";
 import type { SubjectLine } from "@/types/database";
 
 export default function SubjectLinesPage() {
@@ -59,10 +58,6 @@ export default function SubjectLinesPage() {
     fetchSubjectLines();
   };
 
-  const insertVariable = (variable: string) => {
-    setNewText((prev) => prev + `\${${variable}}`);
-  };
-
   return (
     <div className="space-y-6">
       <div>
@@ -75,36 +70,17 @@ export default function SubjectLinesPage() {
       {/* Add form */}
       <Card>
         <CardContent className="pt-6">
-          <div className="space-y-3">
-            <div className="flex flex-wrap gap-1">
-              {templateVariables.map((v) => (
-                <Badge
-                  key={v.key}
-                  variant="secondary"
-                  className="cursor-pointer hover:bg-primary/20"
-                  onClick={() => insertVariable(v.key)}
-                >
-                  {`\${${v.key}}`}
-                </Badge>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <Input
-                value={newText}
-                onChange={(e) => setNewText(e.target.value)}
-                placeholder="Enter a new subject line..."
-                onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-              />
-              <Button onClick={handleAdd} disabled={loading || !newText.trim()}>
-                <Plus className="mr-1 h-4 w-4" />
-                Add
-              </Button>
-            </div>
-            {newText && (
-              <p className="text-sm text-muted-foreground">
-                Preview: {injectVariables(newText, sampleData)}
-              </p>
-            )}
+          <div className="flex gap-2">
+            <Input
+              value={newText}
+              onChange={(e) => setNewText(e.target.value)}
+              placeholder="Enter a new subject line..."
+              onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+            />
+            <Button onClick={handleAdd} disabled={loading || !newText.trim()}>
+              <Plus className="mr-1 h-4 w-4" />
+              Add
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -132,9 +108,6 @@ export default function SubjectLinesPage() {
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{sl.text}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Preview: {injectVariables(sl.text, sampleData)}
-                  </p>
                 </div>
                 <Badge variant="secondary" className="shrink-0">
                   Used {sl.usage_count}×

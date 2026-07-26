@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { templateVariables } from "@/lib/email/template-engine";
 import type { EmailTemplate } from "@/types/database";
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -56,6 +56,15 @@ export function TemplateForm({
       : { name: "", category: (defaultCategory as FormValues["category"]) || "outreach", body: "" },
   });
 
+  // Reset form when template changes (for edit mode)
+  useEffect(() => {
+    if (template) {
+      form.reset({ name: template.name, category: template.category, body: template.body });
+    } else {
+      form.reset({ name: "", category: (defaultCategory as FormValues["category"]) || "outreach", body: "" });
+    }
+  }, [template, defaultCategory, form]);
+
   const { ref: bodyRef, ...bodyRegister } = form.register("body");
 
   const handleSubmit = async (data: FormValues) => {
@@ -88,7 +97,7 @@ export function TemplateForm({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEdit ? "Edit Template" : "Create Template"}
@@ -146,7 +155,7 @@ export function TemplateForm({
                 textareaRef.current = e;
               }}
               placeholder="Write your email template body..."
-              className="w-full min-h-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="w-full min-h-[400px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
             {form.formState.errors.body && (
               <p className="text-xs text-destructive">

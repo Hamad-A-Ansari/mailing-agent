@@ -123,7 +123,8 @@ export interface SendEmailsResponse {
 export async function sendBulkOutreach(
   userId: string,
   recruiterIds: string[],
-  templateCategory: string
+  templateCategory: string,
+  emailTarget: "all" | "company" | "personal" = "all"
 ): Promise<SendEmailsResponse> {
   const supabase = createServerSupabaseClient();
 
@@ -180,11 +181,27 @@ export async function sendBulkOutreach(
 
   for (let i = 0; i < recruiters.length; i++) {
     const recruiter = recruiters[i];
-    const primaryEmail = recruiter.recruiter_emails?.find(
-      (e: { is_primary: boolean }) => e.is_primary
-    )?.email || recruiter.recruiter_emails?.[0]?.email;
 
-    if (!primaryEmail) {
+    // Determine target emails based on emailTarget setting
+    let targetEmails: string[] = [];
+    const allEmails = recruiter.recruiter_emails || [];
+
+    if (emailTarget === "company") {
+      targetEmails = allEmails.filter((e: { type: string }) => e.type === "work").map((e: { email: string }) => e.email);
+    } else if (emailTarget === "personal") {
+      targetEmails = allEmails.filter((e: { type: string }) => e.type === "personal").map((e: { email: string }) => e.email);
+    } else {
+      // "all" — send to all emails
+      targetEmails = allEmails.map((e: { email: string }) => e.email);
+    }
+
+    // Fallback: if no emails match the filter, use primary or first available
+    if (targetEmails.length === 0) {
+      const fallback = allEmails.find((e: { is_primary: boolean }) => e.is_primary)?.email || allEmails[0]?.email;
+      if (fallback) targetEmails = [fallback];
+    }
+
+    if (targetEmails.length === 0) {
       results.push({
         recruiterId: recruiter.id,
         recruiterName: recruiter.name,
@@ -200,21 +217,23 @@ export async function sendBulkOutreach(
     const template = templateAssignments.get(recruiter.id)!;
     const subjectLine = subjectAssignments.get(recruiter.id)!;
 
+    const toAddress = targetEmails.join(", ");
+
     // Build variable data
     const variableData: Record<string, string> = {
       "recruiter.name": recruiter.name,
       "recruiter.company": recruiter.company,
       "recruiter.title": recruiter.title || "",
-      "recruiter.email": primaryEmail,
+      "recruiter.email": targetEmails[0],
     };
 
-    const body = injectVariables(template.body, variableData);
+    const body = injectVariables(template.body, variableData).replace(/\n{3,}/g, "\n\n");
     const subject = injectVariables(subjectLine.text, variableData);
 
     try {
       const mailOptions: nodemailer.SendMailOptions = {
         from: process.env.SMTP_USER,
-        to: primaryEmail,
+        to: toAddress,
         subject,
         text: body,
       };
@@ -236,7 +255,7 @@ export async function sendBulkOutreach(
         recruiter_id: recruiter.id,
         template_id: template.id,
         subject_line_id: subjectLine.id,
-        to_email: primaryEmail,
+        to_email: toAddress,
         subject,
         body,
         status: "sent",
@@ -257,7 +276,7 @@ export async function sendBulkOutreach(
       results.push({
         recruiterId: recruiter.id,
         recruiterName: recruiter.name,
-        email: primaryEmail,
+        email: toAddress,
         templateUsed: template.name,
         subjectUsed: subject,
         status: "sent",
@@ -271,7 +290,7 @@ export async function sendBulkOutreach(
         recruiter_id: recruiter.id,
         template_id: template.id,
         subject_line_id: subjectLine.id,
-        to_email: primaryEmail,
+        to_email: toAddress,
         subject,
         body,
         status: "failed",
@@ -281,7 +300,7 @@ export async function sendBulkOutreach(
       results.push({
         recruiterId: recruiter.id,
         recruiterName: recruiter.name,
-        email: primaryEmail,
+        email: toAddress,
         templateUsed: template.name,
         subjectUsed: subject,
         status: "failed",

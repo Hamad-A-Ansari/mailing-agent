@@ -27,6 +27,7 @@ import {
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { RecruiterFilters } from "./recruiter-filters";
 import { RecruiterForm } from "./recruiter-form";
+import { BulkUploadDialog } from "./bulk-upload-dialog";
 import type { Recruiter, RecruiterEmail, RecruiterStatus } from "@/types/database";
 
 type RecruiterWithEmails = Recruiter & { recruiter_emails: RecruiterEmail[] };
@@ -51,6 +52,7 @@ export function RecruiterTable({ userRole }: RecruiterTableProps) {
   const [status, setStatus] = useState<string | null>(null);
   const [companies, setCompanies] = useState<string[]>([]);
   const [formOpen, setFormOpen] = useState(false);
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [editingRecruiter, setEditingRecruiter] = useState<RecruiterWithEmails | undefined>();
   const [loading, setLoading] = useState(true);
 
@@ -153,7 +155,7 @@ export function RecruiterTable({ userRole }: RecruiterTableProps) {
         onCompanyChange={(c) => { setCompany(c); setPage(1); }}
         onStatusChange={(s) => { setStatus(s); setPage(1); }}
         onAddClick={() => { setEditingRecruiter(undefined); setFormOpen(true); }}
-        onBulkUploadClick={() => {/* handled by parent */}}
+        onBulkUploadClick={() => setBulkUploadOpen(true)}
         onExportClick={handleExport}
       />
 
@@ -282,6 +284,13 @@ export function RecruiterTable({ userRole }: RecruiterTableProps) {
         onClose={() => { setFormOpen(false); setEditingRecruiter(undefined); }}
         onSubmit={editingRecruiter ? handleEdit : handleCreate}
         recruiter={editingRecruiter}
+      />
+
+      {/* Bulk Upload Dialog */}
+      <BulkUploadDialog
+        open={bulkUploadOpen}
+        onClose={() => setBulkUploadOpen(false)}
+        onComplete={() => fetchRecruiters()}
       />
     </div>
   );
