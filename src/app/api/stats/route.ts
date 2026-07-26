@@ -8,8 +8,8 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
  */
 export async function GET() {
   const { userId } = await auth();
-  if (!userId || !isOwner(userId)) {
-    return Response.json({ error: "Not authorized" }, { status: 403 });
+  if (!userId) {
+    return Response.json({ error: "Not authorized" }, { status: 401 });
   }
 
   const supabase = createServerSupabaseClient();

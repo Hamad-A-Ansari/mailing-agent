@@ -11,8 +11,8 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
  */
 export async function GET() {
   const { userId } = await auth();
-  if (!userId || !isOwner(userId)) {
-    return Response.json({ error: "Not authorized" }, { status: 403 });
+  if (!userId) {
+    return Response.json({ error: "Not authorized" }, { status: 401 });
   }
 
   const supabase = createServerSupabaseClient();
@@ -35,8 +35,8 @@ export async function GET() {
  */
 export async function POST(request: Request) {
   const { userId } = await auth();
-  if (!userId || !isOwner(userId)) {
-    return Response.json({ error: "Not authorized" }, { status: 403 });
+  if (!userId) {
+    return Response.json({ error: "Not authorized" }, { status: 401 });
   }
 
   const formData = await request.formData();

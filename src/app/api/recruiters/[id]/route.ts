@@ -10,12 +10,12 @@ interface RouteParams {
 
 /**
  * PUT /api/recruiters/[id]
- * Update a recruiter. Owner only.
+ * Update a recruiter. All authenticated users (demo mode).
  */
 export async function PUT(request: Request, { params }: RouteParams) {
   const { userId } = await auth();
-  if (!userId || !isOwner(userId)) {
-    return Response.json({ error: "Not authorized" }, { status: 403 });
+  if (!userId) {
+    return Response.json({ error: "Not authorized" }, { status: 401 });
   }
 
   const { id } = await params;
@@ -82,12 +82,12 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
 /**
  * DELETE /api/recruiters/[id]
- * Delete a recruiter. Owner only.
+ * Delete a recruiter. All authenticated users (demo mode).
  */
 export async function DELETE(_request: Request, { params }: RouteParams) {
   const { userId } = await auth();
-  if (!userId || !isOwner(userId)) {
-    return Response.json({ error: "Not authorized" }, { status: 403 });
+  if (!userId) {
+    return Response.json({ error: "Not authorized" }, { status: 401 });
   }
 
   const { id } = await params;

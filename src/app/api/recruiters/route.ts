@@ -83,12 +83,12 @@ export async function GET(request: Request) {
 
 /**
  * POST /api/recruiters
- * Create a new recruiter. Owner only.
+ * Create a new recruiter. All authenticated users (demo mode).
  */
 export async function POST(request: Request) {
   const { userId } = await auth();
-  if (!userId || !isOwner(userId)) {
-    return Response.json({ error: "Not authorized" }, { status: 403 });
+  if (!userId) {
+    return Response.json({ error: "Not authorized" }, { status: 401 });
   }
 
   const body = await request.json();

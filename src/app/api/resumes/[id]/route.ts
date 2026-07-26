@@ -13,8 +13,8 @@ interface RouteParams {
  */
 export async function PUT(_request: Request, { params }: RouteParams) {
   const { userId } = await auth();
-  if (!userId || !isOwner(userId)) {
-    return Response.json({ error: "Not authorized" }, { status: 403 });
+  if (!userId) {
+    return Response.json({ error: "Not authorized" }, { status: 401 });
   }
 
   const { id } = await params;
@@ -52,8 +52,8 @@ export async function PUT(_request: Request, { params }: RouteParams) {
  */
 export async function DELETE(_request: Request, { params }: RouteParams) {
   const { userId } = await auth();
-  if (!userId || !isOwner(userId)) {
-    return Response.json({ error: "Not authorized" }, { status: 403 });
+  if (!userId) {
+    return Response.json({ error: "Not authorized" }, { status: 401 });
   }
 
   const { id } = await params;

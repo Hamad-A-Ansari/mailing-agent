@@ -2,11 +2,8 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getUserRole, isOwner } from "@/lib/auth";
 import { Sidebar } from "@/components/sidebar";
+import { DemoBanner } from "@/components/demo-banner";
 import { UserButton } from "@clerk/nextjs";
-import { headers } from "next/headers";
-
-// Routes restricted to owner only
-const ownerOnlyPaths = ["/templates", "/subject-lines", "/send", "/activity"];
 
 export default async function DashboardLayout({
   children,
@@ -20,20 +17,13 @@ export default async function DashboardLayout({
   }
 
   const userRole = getUserRole(userId);
-
-  // Redirect non-owners from restricted routes
-  if (!isOwner(userId)) {
-    const headerList = await headers();
-    const pathname = headerList.get("x-pathname") || headerList.get("x-invoke-path") || "";
-    if (ownerOnlyPaths.some((p) => pathname.startsWith(p)) || pathname === "/") {
-      redirect("/recruiters");
-    }
-  }
+  const isDemo = !isOwner(userId);
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar userRole={userRole} />
+      <Sidebar userRole={isDemo ? "owner" : userRole} />
       <div className="flex flex-1 flex-col overflow-hidden">
+        {isDemo && <DemoBanner />}
         <header className="flex h-14 items-center justify-end border-b px-6">
           <UserButton />
         </header>

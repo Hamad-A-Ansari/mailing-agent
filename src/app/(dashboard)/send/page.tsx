@@ -52,6 +52,14 @@ export default function SendPage() {
   const [search, setSearch] = useState("");
   const [companyFilter, setCompanyFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [isDemo, setIsDemo] = useState(false);
+
+  // Check if user is in demo mode
+  useEffect(() => {
+    fetch("/api/me").then((r) => r.json()).then((data) => {
+      setIsDemo(data.isDemo ?? false);
+    });
+  }, []);
 
   // Fetch recruiters
   const fetchRecruiters = useCallback(async () => {
@@ -366,14 +374,17 @@ export default function SendPage() {
               <ArrowLeft className="mr-1 h-4 w-4" /> Back
             </Button>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleTestEmail}>
+              <Button variant="outline" onClick={handleTestEmail} disabled={isDemo}>
                 Send Test Email
               </Button>
-              <Button onClick={() => { setStep(4); handleSend(); }}>
+              <Button onClick={() => { setStep(4); handleSend(); }} disabled={isDemo}>
                 <Mail className="mr-1 h-4 w-4" /> Send All
               </Button>
             </div>
           </div>
+          {isDemo && (
+            <p className="text-xs text-yellow-400 text-center">Email sending is disabled in demo mode.</p>
+          )}
         </div>
       )}
 
