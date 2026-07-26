@@ -7,7 +7,6 @@ import {
   FieldGroup,
 } from "@/components/ui/field"
 import { SignIn } from "@clerk/nextjs"
-import { Mail } from "lucide-react"
 
 export function LoginForm({
   className,
@@ -16,11 +15,8 @@ export function LoginForm({
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <FieldGroup>
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div className="flex items-center gap-2">
-            <Mail className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">Switch FAANG</span>
-          </div>
+        <div className="flex flex-col items-center gap-4 text-center mb-4">
+          <span className="text-3xl font-bold tracking-tight">Switch FAANG</span>
           <h1 className="text-lg font-semibold text-foreground">
             Cold Email Outreach for Job Seekers
           </h1>
