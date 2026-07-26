@@ -6,28 +6,31 @@ import {
   FieldDescription,
   FieldGroup,
 } from "@/components/ui/field"
-import { useClerk } from "@clerk/nextjs"
+import { useSignIn } from "@clerk/nextjs"
+import { useState } from "react"
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const clerk = useClerk()
+  const { signIn } = useSignIn()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleGoogleSignIn = () => {
-    clerk.openSignIn({
-      appearance: {
-        variables: {
-          colorBackground: "#1a1a1a",
-          colorPrimary: "#ffffff",
-        },
-        elements: {
-          headerTitle: "hidden",
-          headerSubtitle: "hidden",
-          footer: "hidden",
-        },
-      },
-    })
+  const handleGoogleSignIn = async () => {
+    if (!signIn) return
+    setLoading(true)
+    setError(null)
+    try {
+      await (signIn as unknown as { sso: (params: { strategy: string; redirectUrl: string }) => Promise<void> }).sso({
+        strategy: "oauth_google",
+        redirectUrl: "/",
+      })
+    } catch (err) {
+      console.error("Sign-in error:", err)
+      setError("Failed to start sign-in. Please try again.")
+      setLoading(false)
+    }
   }
 
   return (
@@ -43,12 +46,13 @@ export function LoginForm({
           </p>
         </div>
 
-        <div className="pt-6">
+        <div className="pt-6 space-y-3">
           <Button
             className="w-full py-6 text-base font-medium"
             variant="outline"
             size="lg"
             onClick={handleGoogleSignIn}
+            disabled={loading}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="mr-2 h-5 w-5">
               <path
@@ -68,8 +72,12 @@ export function LoginForm({
                 fill="#EA4335"
               />
             </svg>
-            Continue with Google
+            {loading ? "Signing in..." : "Continue with Google"}
           </Button>
+
+          {error && (
+            <p className="text-xs text-destructive text-center">{error}</p>
+          )}
         </div>
 
         <FieldDescription className="text-center text-xs pt-4 text-muted-foreground/60">
