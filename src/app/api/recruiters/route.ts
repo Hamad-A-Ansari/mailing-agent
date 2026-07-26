@@ -18,6 +18,8 @@ export async function GET(request: Request) {
   const company = searchParams.get("company");
   const status = searchParams.get("status");
   const search = searchParams.get("search");
+  const cursor = searchParams.get("cursor"); // cursor-based: created_at of last item
+  const cursorId = searchParams.get("cursorId"); // tie-breaker
   const page = parseInt(searchParams.get("page") || "1", 10);
   const pageSize = parseInt(searchParams.get("pageSize") || "20", 10);
 
@@ -37,9 +39,31 @@ export async function GET(request: Request) {
     query = query.or(`name.ilike.%${search}%,company.ilike.%${search}%`);
   }
 
+  // Cursor-based pagination (preferred)
+  if (cursor && cursorId) {
+    query = query.or(`created_at.lt.${cursor},and(created_at.eq.${cursor},id.lt.${cursorId})`);
+  }
+
   query = query
     .order("created_at", { ascending: false })
-    .range((page - 1) * pageSize, page * pageSize - 1);
+    .order("id", { ascending: false })
+    .limit(pageSize);
+
+  // Fallback: offset-based if no cursor provided and page > 1
+  if (!cursor && page > 1) {
+    query = supabase
+      .from("recruiters")
+      .select("*, recruiter_emails(*)", { count: "exact" });
+
+    if (company) query = query.eq("company", company);
+    if (status) query = query.eq("status", status);
+    if (search) query = query.or(`name.ilike.%${search}%,company.ilike.%${search}%`);
+
+    query = query
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range((page - 1) * pageSize, page * pageSize - 1);
+  }
 
   const { data, error, count } = await query;
 
@@ -52,6 +76,8 @@ export async function GET(request: Request) {
     total: count ?? 0,
     page,
     pageSize,
+    nextCursor: data && data.length === pageSize ? data[data.length - 1].created_at : null,
+    nextCursorId: data && data.length === pageSize ? data[data.length - 1].id : null,
   });
 }
 

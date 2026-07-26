@@ -24,6 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
 import { MoreHorizontal, Pencil, Trash2, Copy, Check } from "lucide-react";
 import { RecruiterFilters } from "./recruiter-filters";
 import { RecruiterForm } from "./recruiter-form";
@@ -99,18 +100,30 @@ export function RecruiterTable({ userRole }: RecruiterTableProps) {
   }, []);
 
   const handleStatusChange = async (id: string, newStatus: string) => {
-    await fetch(`/api/recruiters/${id}`, {
+    // Optimistic update
+    setRecruiters((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status: newStatus as RecruiterWithEmails["status"] } : r))
+    );
+    const res = await fetch(`/api/recruiters/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: newStatus }),
     });
-    fetchRecruiters();
+    if (!res.ok) fetchRecruiters(); // Rollback on error
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this recruiter?")) return;
-    await fetch(`/api/recruiters/${id}`, { method: "DELETE" });
-    fetchRecruiters();
+    // Optimistic remove
+    const previousRecruiters = recruiters;
+    setRecruiters((prev) => prev.filter((r) => r.id !== id));
+    setTotal((prev) => prev - 1);
+    const res = await fetch(`/api/recruiters/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      // Rollback
+      setRecruiters(previousRecruiters);
+      setTotal((prev) => prev + 1);
+    }
   };
 
   const handleCreate = async (data: Record<string, unknown>) => {
@@ -181,11 +194,17 @@ export function RecruiterTable({ userRole }: RecruiterTableProps) {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={isOwner ? 7 : 6} className="text-center py-8 text-muted-foreground">
-                  Loading...
-                </TableCell>
-              </TableRow>
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={`skeleton-${i}`}>
+                  <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-36" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-36" /></TableCell>
+                  <TableCell><Skeleton className="h-7 w-24" /></TableCell>
+                  {isOwner && <TableCell><Skeleton className="h-7 w-7" /></TableCell>}
+                </TableRow>
+              ))
             ) : recruiters.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={isOwner ? 7 : 6} className="text-center py-8 text-muted-foreground">

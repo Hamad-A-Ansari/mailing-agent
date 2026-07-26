@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CheckSquare, Square, ArrowLeft, ArrowRight, Mail, Search } from "lucide-react";
+import { CheckSquare, Square, ArrowLeft, ArrowRight, Mail, Search, RotateCcw } from "lucide-react";
 import type { Recruiter, RecruiterEmail, TemplateCategory } from "@/types/database";
 
 type RecruiterWithEmails = Recruiter & { recruiter_emails: RecruiterEmail[] };
@@ -109,25 +109,60 @@ export default function SendPage() {
     if (!category || selected.size === 0) return;
     setSending(true);
     setProgress(0);
+    setResults([]);
 
-    const res = await fetch("/api/send-emails", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        recruiterIds: [...selected],
-        templateCategory: category,
-        emailTarget,
-      }),
-    });
+    try {
+      const res = await fetch("/api/send-emails/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recruiterIds: [...selected],
+          templateCategory: category,
+          emailTarget,
+        }),
+      });
 
-    if (res.ok) {
-      const data = await res.json();
-      setResults(data.results);
-      setProgress(100);
-    } else {
-      const err = await res.json();
-      setResults([{ recruiterId: "", recruiterName: "", email: "", templateUsed: "", subjectUsed: "", status: "failed", error: err.error }]);
+      if (!res.ok) {
+        const err = await res.json();
+        setResults([{ recruiterId: "", recruiterName: "", email: "", templateUsed: "", subjectUsed: "", status: "failed", error: err.error }]);
+        setSending(false);
+        return;
+      }
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      let totalCount = selected.size;
+
+      if (reader) {
+        let buffer = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.type === "start") {
+                totalCount = data.total;
+              } else if (data.type === "progress") {
+                setResults((prev) => [...prev, data]);
+                setProgress(((data.index + 1) / totalCount) * 100);
+              } else if (data.type === "done") {
+                setProgress(100);
+              }
+            } catch { /* ignore parse errors */ }
+          }
+        }
+      }
+    } catch (err) {
+      setResults([{ recruiterId: "", recruiterName: "", email: "", templateUsed: "", subjectUsed: "", status: "failed", error: err instanceof Error ? err.message : "Connection failed" }]);
     }
+
     setSending(false);
   };
 
@@ -345,62 +380,101 @@ export default function SendPage() {
       {/* Step 4: Sending Progress */}
       {step === 4 && (
         <div className="space-y-4">
-          {sending ? (
-            <Card>
-              <CardContent className="pt-6 text-center">
-                <p className="text-lg font-medium">Sending emails...</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  This may take a while due to rate limiting (5-10s between each).
+          {/* Progress bar */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium">
+                  {sending ? "Sending emails..." : "Complete"}
                 </p>
-                <div className="w-full bg-muted rounded-full h-2 mt-4">
-                  <div className="bg-primary h-2 rounded-full animate-pulse" style={{ width: "50%" }} />
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              <div className="flex gap-4">
-                <Badge variant="default" className="text-sm">
-                  {results.filter((r) => r.status === "sent").length} sent
-                </Badge>
-                {results.filter((r) => r.status === "failed").length > 0 && (
-                  <Badge variant="destructive" className="text-sm">
-                    {results.filter((r) => r.status === "failed").length} failed
-                  </Badge>
-                )}
+                <span className="text-sm text-muted-foreground">
+                  {results.length} / {selected.size}
+                </span>
               </div>
-              <div className="rounded-md border max-h-[400px] overflow-y-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Recruiter</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Template</TableHead>
-                      <TableHead>Subject</TableHead>
-                      <TableHead>Status</TableHead>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              {sending && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Rate limited: 5-10s between each email.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Stats */}
+          <div className="flex gap-4">
+            <Badge variant="default" className="text-sm">
+              {results.filter((r) => r.status === "sent").length} sent
+            </Badge>
+            {results.filter((r) => r.status === "failed").length > 0 && (
+              <Badge variant="destructive" className="text-sm">
+                {results.filter((r) => r.status === "failed").length} failed
+              </Badge>
+            )}
+          </div>
+
+          {/* Results table */}
+          {results.length > 0 && (
+            <div className="rounded-md border max-h-[400px] overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Recruiter</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Template</TableHead>
+                    <TableHead>Subject</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {results.map((r, i) => (
+                    <TableRow key={i}>
+                      <TableCell>{r.recruiterName}</TableCell>
+                      <TableCell className="text-xs">{r.email}</TableCell>
+                      <TableCell className="text-xs">{r.templateUsed}</TableCell>
+                      <TableCell className="text-xs">{r.subjectUsed}</TableCell>
+                      <TableCell>
+                        <Badge variant={r.status === "sent" ? "default" : "destructive"}>
+                          {r.status}
+                        </Badge>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {results.map((r, i) => (
-                      <TableRow key={i}>
-                        <TableCell>{r.recruiterName}</TableCell>
-                        <TableCell className="text-xs">{r.email}</TableCell>
-                        <TableCell className="text-xs">{r.templateUsed}</TableCell>
-                        <TableCell className="text-xs">{r.subjectUsed}</TableCell>
-                        <TableCell>
-                          <Badge variant={r.status === "sent" ? "default" : "destructive"}>
-                            {r.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              <Button variant="outline" onClick={() => { setStep(1); setSelected(new Set()); setResults([]); }}>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {/* Actions */}
+          {!sending && (
+            <div className="flex gap-2">
+              {results.filter((r) => r.status === "failed").length > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const failedIds = results
+                      .filter((r) => r.status === "failed" && r.recruiterId)
+                      .map((r) => r.recruiterId);
+                    if (failedIds.length > 0) {
+                      setSelected(new Set(failedIds));
+                      setResults([]);
+                      setProgress(0);
+                      handleSend();
+                    }
+                  }}
+                >
+                  <RotateCcw className="mr-1 h-4 w-4" />
+                  Retry Failed ({results.filter((r) => r.status === "failed").length})
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => { setStep(1); setSelected(new Set()); setResults([]); setProgress(0); }}>
                 Send More
               </Button>
-            </>
+            </div>
           )}
         </div>
       )}

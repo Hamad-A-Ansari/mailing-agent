@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -26,7 +27,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Upload } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Upload, Trash2, AlertTriangle, Pencil } from "lucide-react";
 
 interface BulkUploadDialogProps {
   open: boolean;
@@ -44,6 +46,22 @@ type ColumnMapping = {
 
 type ParsedRow = Record<string, string>;
 
+interface PreviewEntry {
+  id: number;
+  name: string;
+  company: string;
+  email: string;
+  title: string;
+  notes: string;
+  emailValid: boolean;
+  isDuplicate: boolean;
+  editing: boolean;
+}
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+
 export function BulkUploadDialog({
   open,
   onClose,
@@ -59,8 +77,27 @@ export function BulkUploadDialog({
     email: null,
     notes: null,
   });
+  const [entries, setEntries] = useState<PreviewEntry[]>([]);
+  const [existingEmails, setExistingEmails] = useState<Set<string>>(new Set());
   const [results, setResults] = useState<{ inserted: number; failed: number; errors: Array<{ row: number; message: string }> } | null>(null);
   const [importing, setImporting] = useState(false);
+
+  // Fetch existing emails for dedup check
+  useEffect(() => {
+    if (open) {
+      fetch("/api/recruiters?pageSize=10000")
+        .then((r) => r.json())
+        .then((data) => {
+          const emails = new Set<string>();
+          for (const r of data.recruiters || []) {
+            for (const e of r.recruiter_emails || []) {
+              emails.add(e.email.toLowerCase());
+            }
+          }
+          setExistingEmails(emails);
+        });
+    }
+  }, [open]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -98,26 +135,70 @@ export function BulkUploadDialog({
     }
   };
 
-  const handleImport = async () => {
+  const buildPreviewEntries = () => {
     if (!mapping.name || !mapping.company || !mapping.email) return;
+
+    const processed: PreviewEntry[] = rows
+      .filter((row) => row[mapping.name!]?.trim())
+      .map((row, i) => {
+        const email = row[mapping.email!]?.trim() || "";
+        return {
+          id: i,
+          name: row[mapping.name!].trim(),
+          company: row[mapping.company!]?.trim() || "",
+          email,
+          title: mapping.title ? row[mapping.title]?.trim() || "" : "",
+          notes: mapping.notes ? row[mapping.notes]?.trim() || "" : "",
+          emailValid: email ? isValidEmail(email) : false,
+          isDuplicate: email ? existingEmails.has(email.toLowerCase()) : false,
+          editing: false,
+        };
+      });
+
+    setEntries(processed);
+    setStep("preview");
+  };
+
+  const updateEntry = (id: number, field: keyof PreviewEntry, value: string) => {
+    setEntries((prev) =>
+      prev.map((e) => {
+        if (e.id !== id) return e;
+        const updated = { ...e, [field]: value };
+        if (field === "email") {
+          updated.emailValid = isValidEmail(value);
+          updated.isDuplicate = existingEmails.has(value.toLowerCase());
+        }
+        return updated;
+      })
+    );
+  };
+
+  const toggleEdit = (id: number) => {
+    setEntries((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, editing: !e.editing } : e))
+    );
+  };
+
+  const removeEntry = (id: number) => {
+    setEntries((prev) => prev.filter((e) => e.id !== id));
+  };
+
+  const invalidCount = entries.filter((e) => !e.emailValid).length;
+  const duplicateCount = entries.filter((e) => e.isDuplicate).length;
+  const validEntries = entries.filter((e) => e.emailValid && !e.isDuplicate);
+
+  const handleImport = async () => {
+    if (validEntries.length === 0) return;
 
     setImporting(true);
 
-    const recruiters = rows
-      .filter((row) => row[mapping.name!]?.trim() && row[mapping.email!]?.trim())
-      .map((row) => ({
-        name: row[mapping.name!].trim(),
-        company: row[mapping.company!].trim(),
-        title: mapping.title ? row[mapping.title]?.trim() || null : null,
-        notes: mapping.notes ? row[mapping.notes]?.trim() || null : null,
-        emails: [
-          {
-            email: row[mapping.email!].trim(),
-            type: "work",
-            is_primary: true,
-          },
-        ],
-      }));
+    const recruiters = validEntries.map((e) => ({
+      name: e.name,
+      company: e.company,
+      title: e.title || null,
+      notes: e.notes || null,
+      emails: [{ email: e.email, type: "work", is_primary: true }],
+    }));
 
     const res = await fetch("/api/recruiters/bulk", {
       method: "POST",
@@ -135,6 +216,7 @@ export function BulkUploadDialog({
     setStep("upload");
     setHeaders([]);
     setRows([]);
+    setEntries([]);
     setMapping({ name: null, company: null, title: null, email: null, notes: null });
     setResults(null);
   };
@@ -147,11 +229,9 @@ export function BulkUploadDialog({
     }
   };
 
-  const previewRows = rows.slice(0, 10);
-
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[70vw] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Bulk Upload Recruiters</DialogTitle>
         </DialogHeader>
@@ -205,7 +285,7 @@ export function BulkUploadDialog({
                 Back
               </Button>
               <Button
-                onClick={() => setStep("preview")}
+                onClick={buildPreviewEntries}
                 disabled={!mapping.name || !mapping.company || !mapping.email}
               >
                 Preview
@@ -216,10 +296,35 @@ export function BulkUploadDialog({
 
         {step === "preview" && (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Preview first 10 rows (of {rows.length} total)
-            </p>
-            <div className="rounded-md border overflow-x-auto">
+            {/* Warnings */}
+            {(invalidCount > 0 || duplicateCount > 0) && (
+              <div className="space-y-2">
+                {invalidCount > 0 && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      {invalidCount} row(s) have invalid email addresses (highlighted in red). They will be skipped unless fixed.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {duplicateCount > 0 && (
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      {duplicateCount} row(s) have emails that already exist in your database (highlighted in yellow). They will be skipped unless removed or edited.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                {entries.length} rows total · {validEntries.length} will be imported
+              </p>
+            </div>
+
+            <div className="rounded-md border overflow-x-auto max-h-[400px] overflow-y-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -227,26 +332,104 @@ export function BulkUploadDialog({
                     <TableHead>Company</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Title</TableHead>
+                    <TableHead className="w-[80px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {previewRows.map((row, i) => (
-                    <TableRow key={i}>
-                      <TableCell>{mapping.name ? row[mapping.name] : ""}</TableCell>
-                      <TableCell>{mapping.company ? row[mapping.company] : ""}</TableCell>
-                      <TableCell>{mapping.email ? row[mapping.email] : ""}</TableCell>
-                      <TableCell>{mapping.title ? row[mapping.title] : "—"}</TableCell>
+                  {entries.map((entry) => (
+                    <TableRow
+                      key={entry.id}
+                      className={
+                        !entry.emailValid
+                          ? "bg-destructive/10"
+                          : entry.isDuplicate
+                            ? "bg-yellow-500/10"
+                            : ""
+                      }
+                    >
+                      <TableCell>
+                        {entry.editing ? (
+                          <Input
+                            value={entry.name}
+                            onChange={(e) => updateEntry(entry.id, "name", e.target.value)}
+                            className="h-7 text-xs"
+                          />
+                        ) : (
+                          <span className="text-sm">{entry.name}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {entry.editing ? (
+                          <Input
+                            value={entry.company}
+                            onChange={(e) => updateEntry(entry.id, "company", e.target.value)}
+                            className="h-7 text-xs"
+                          />
+                        ) : (
+                          <span className="text-sm">{entry.company}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {entry.editing ? (
+                          <Input
+                            value={entry.email}
+                            onChange={(e) => updateEntry(entry.id, "email", e.target.value)}
+                            className="h-7 text-xs"
+                          />
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs">{entry.email}</span>
+                            {!entry.emailValid && (
+                              <Badge variant="destructive" className="text-[10px] px-1">invalid</Badge>
+                            )}
+                            {entry.isDuplicate && entry.emailValid && (
+                              <Badge variant="secondary" className="text-[10px] px-1">exists</Badge>
+                            )}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {entry.editing ? (
+                          <Input
+                            value={entry.title}
+                            onChange={(e) => updateEntry(entry.id, "title", e.target.value)}
+                            className="h-7 text-xs"
+                          />
+                        ) : (
+                          <span className="text-sm">{entry.title || "—"}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            className="p-1 rounded hover:bg-muted"
+                            onClick={() => toggleEdit(entry.id)}
+                            title={entry.editing ? "Done" : "Edit"}
+                          >
+                            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
+                          <button
+                            type="button"
+                            className="p-1 rounded hover:bg-muted"
+                            onClick={() => removeEntry(entry.id)}
+                            title="Remove"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </div>
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-between">
               <Button variant="outline" onClick={() => setStep("map")}>
                 Back
               </Button>
-              <Button onClick={handleImport} disabled={importing}>
-                {importing ? "Importing..." : `Import ${rows.length} rows`}
+              <Button onClick={handleImport} disabled={importing || validEntries.length === 0}>
+                {importing ? "Importing..." : `Import ${validEntries.length} rows`}
               </Button>
             </div>
           </div>
