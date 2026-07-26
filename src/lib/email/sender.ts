@@ -221,7 +221,7 @@ export async function sendBulkOutreach(
 
     // Build variable data
     const variableData: Record<string, string> = {
-      "recruiter.name": recruiter.name,
+      "recruiter.firstname": recruiter.name.trim().split(/\s+/)[0] || recruiter.name,
       "recruiter.company": recruiter.company,
       "recruiter.title": recruiter.title || "",
       "recruiter.email": targetEmails[0],

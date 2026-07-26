@@ -24,7 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Copy } from "lucide-react";
 import { RecruiterFilters } from "./recruiter-filters";
 import { RecruiterForm } from "./recruiter-form";
 import { BulkUploadDialog } from "./bulk-upload-dialog";
@@ -166,7 +166,8 @@ export function RecruiterTable({ userRole }: RecruiterTableProps) {
               <TableHead>Name</TableHead>
               <TableHead>Company</TableHead>
               <TableHead>Title</TableHead>
-              <TableHead>Emails</TableHead>
+              <TableHead>Company Email</TableHead>
+              <TableHead>Personal Email</TableHead>
               <TableHead>Status</TableHead>
               {isOwner && <TableHead className="w-[70px]">Actions</TableHead>}
             </TableRow>
@@ -174,26 +175,67 @@ export function RecruiterTable({ userRole }: RecruiterTableProps) {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={isOwner ? 6 : 5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={isOwner ? 7 : 6} className="text-center py-8 text-muted-foreground">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : recruiters.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isOwner ? 6 : 5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={isOwner ? 7 : 6} className="text-center py-8 text-muted-foreground">
                   No recruiters found
                 </TableCell>
               </TableRow>
             ) : (
-              recruiters.map((recruiter) => (
+              recruiters.map((recruiter) => {
+                const companyEmails = recruiter.recruiter_emails?.filter(e => e.type === "work") || [];
+                const personalEmails = recruiter.recruiter_emails?.filter(e => e.type === "personal") || [];
+
+                return (
                 <TableRow key={recruiter.id}>
                   <TableCell className="font-medium">{recruiter.name}</TableCell>
                   <TableCell>{recruiter.company}</TableCell>
                   <TableCell>{recruiter.title || "—"}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary">
-                      {recruiter.recruiter_emails?.length ?? 0}
-                    </Badge>
+                    {companyEmails.length === 0 ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      <div className="flex items-start gap-1">
+                        <div className="flex flex-col gap-0.5">
+                          {companyEmails.map(e => (
+                            <span key={e.id} className="text-xs">{e.email}</span>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          className="shrink-0 p-1 rounded hover:bg-muted"
+                          onClick={() => navigator.clipboard.writeText(companyEmails.map(e => e.email).join("\n"))}
+                          title="Copy"
+                        >
+                          <Copy className="h-3 w-3 text-muted-foreground" />
+                        </button>
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {personalEmails.length === 0 ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      <div className="flex items-start gap-1">
+                        <div className="flex flex-col gap-0.5">
+                          {personalEmails.map(e => (
+                            <span key={e.id} className="text-xs">{e.email}</span>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          className="shrink-0 p-1 rounded hover:bg-muted"
+                          onClick={() => navigator.clipboard.writeText(personalEmails.map(e => e.email).join("\n"))}
+                          title="Copy"
+                        >
+                          <Copy className="h-3 w-3 text-muted-foreground" />
+                        </button>
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell>
                     {isOwner ? (
@@ -245,7 +287,8 @@ export function RecruiterTable({ userRole }: RecruiterTableProps) {
                     </TableCell>
                   )}
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>
