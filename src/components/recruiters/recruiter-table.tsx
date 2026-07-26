@@ -24,7 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, Copy } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Copy, Check } from "lucide-react";
 import { RecruiterFilters } from "./recruiter-filters";
 import { RecruiterForm } from "./recruiter-form";
 import { BulkUploadDialog } from "./bulk-upload-dialog";
@@ -55,6 +55,13 @@ export function RecruiterTable({ userRole }: RecruiterTableProps) {
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [editingRecruiter, setEditingRecruiter] = useState<RecruiterWithEmails | undefined>();
   const [loading, setLoading] = useState(true);
+  const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
+
+  const copyEmail = (email: string) => {
+    navigator.clipboard.writeText(email);
+    setCopiedEmail(email);
+    setTimeout(() => setCopiedEmail(null), 2000);
+  };
 
   const isOwner = userRole === "owner";
   const pageSize = 20;
@@ -199,20 +206,24 @@ export function RecruiterTable({ userRole }: RecruiterTableProps) {
                     {companyEmails.length === 0 ? (
                       <span className="text-muted-foreground">—</span>
                     ) : (
-                      <div className="flex items-start gap-1">
-                        <div className="flex flex-col gap-0.5">
-                          {companyEmails.map(e => (
-                            <span key={e.id} className="text-xs">{e.email}</span>
-                          ))}
-                        </div>
-                        <button
-                          type="button"
-                          className="shrink-0 p-1 rounded hover:bg-muted"
-                          onClick={() => navigator.clipboard.writeText(companyEmails.map(e => e.email).join("\n"))}
-                          title="Copy"
-                        >
-                          <Copy className="h-3 w-3 text-muted-foreground" />
-                        </button>
+                      <div className="flex flex-col gap-0.5">
+                        {companyEmails.map(e => (
+                          <div key={e.id} className="flex items-center gap-1">
+                            <span className="text-xs">{e.email}</span>
+                            <button
+                              type="button"
+                              className="shrink-0 p-0.5 rounded hover:bg-muted"
+                              onClick={() => copyEmail(e.email)}
+                              title="Copy"
+                            >
+                              {copiedEmail === e.email ? (
+                                <Check className="h-3 w-3 text-green-500" />
+                              ) : (
+                                <Copy className="h-3 w-3 text-muted-foreground" />
+                              )}
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </TableCell>
@@ -220,20 +231,24 @@ export function RecruiterTable({ userRole }: RecruiterTableProps) {
                     {personalEmails.length === 0 ? (
                       <span className="text-muted-foreground">—</span>
                     ) : (
-                      <div className="flex items-start gap-1">
-                        <div className="flex flex-col gap-0.5">
-                          {personalEmails.map(e => (
-                            <span key={e.id} className="text-xs">{e.email}</span>
-                          ))}
-                        </div>
-                        <button
-                          type="button"
-                          className="shrink-0 p-1 rounded hover:bg-muted"
-                          onClick={() => navigator.clipboard.writeText(personalEmails.map(e => e.email).join("\n"))}
-                          title="Copy"
-                        >
-                          <Copy className="h-3 w-3 text-muted-foreground" />
-                        </button>
+                      <div className="flex flex-col gap-0.5">
+                        {personalEmails.map(e => (
+                          <div key={e.id} className="flex items-center gap-1">
+                            <span className="text-xs">{e.email}</span>
+                            <button
+                              type="button"
+                              className="shrink-0 p-0.5 rounded hover:bg-muted"
+                              onClick={() => copyEmail(e.email)}
+                              title="Copy"
+                            >
+                              {copiedEmail === e.email ? (
+                                <Check className="h-3 w-3 text-green-500" />
+                              ) : (
+                                <Copy className="h-3 w-3 text-muted-foreground" />
+                              )}
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </TableCell>
