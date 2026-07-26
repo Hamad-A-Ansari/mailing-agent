@@ -3,6 +3,7 @@
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -74,6 +75,31 @@ export function RecruiterForm({
           emails: [{ email: "", type: "work", is_primary: true }],
         },
   });
+
+  // Reset form when recruiter changes (for edit mode)
+  useEffect(() => {
+    if (recruiter) {
+      form.reset({
+        name: recruiter.name,
+        company: recruiter.company,
+        title: recruiter.title ?? "",
+        notes: recruiter.notes ?? "",
+        emails: recruiter.recruiter_emails.map((e) => ({
+          email: e.email,
+          type: e.type,
+          is_primary: e.is_primary,
+        })),
+      });
+    } else {
+      form.reset({
+        name: "",
+        company: "",
+        title: "",
+        notes: "",
+        emails: [{ email: "", type: "work", is_primary: true }],
+      });
+    }
+  }, [recruiter, form]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
