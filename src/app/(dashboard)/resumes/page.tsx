@@ -58,8 +58,7 @@ export default function ResumesPage() {
     if (res.ok) {
       await fetchResumes();
     } else {
-      const data = await res.json();
-      setError(data.error || "Upload failed.");
+      setError("Failed to upload resume. Please try again.");
     }
 
     setUploading(false);
