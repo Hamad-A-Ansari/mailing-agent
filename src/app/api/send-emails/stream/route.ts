@@ -3,7 +3,7 @@ import { isOwner } from "@/lib/auth";
 import { logActivity } from "@/lib/activity-logger";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { injectVariables } from "@/lib/email/template-engine";
-import { getDefaultResume } from "@/lib/email/sender";
+import { getResumeById } from "@/lib/email/sender";
 import nodemailer from "nodemailer";
 import { z } from "zod";
 
@@ -11,6 +11,9 @@ const sendEmailsSchema = z.object({
   recruiterIds: z.array(z.string()).min(1).max(50),
   templateCategory: z.enum(["outreach", "follow-up", "referral"]),
   emailTarget: z.enum(["all", "company", "personal"]).default("all"),
+  resumeId: z.string().optional(),
+  randomizeSubjects: z.boolean().default(true),
+  subjectLineId: z.string().optional(),
 });
 
 /**
@@ -33,7 +36,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { recruiterIds, templateCategory, emailTarget } = parsed.data;
+  const { recruiterIds, templateCategory, emailTarget, resumeId, randomizeSubjects, subjectLineId } = parsed.data;
   const uniqueIds = [...new Set(recruiterIds)];
 
   if (uniqueIds.length > 50) {
@@ -70,7 +73,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "No active subject lines" }, { status: 400 });
   }
 
-  const resume = await getDefaultResume();
+  const resume = resumeId ? await getResumeById(resumeId) : null;
 
   // Create transporter
   const transporter = nodemailer.createTransport({
@@ -142,7 +145,9 @@ export async function POST(request: Request) {
         }
 
         const template = pickTemplate(recruiter.company);
-        const subjectLine = pickSubject(recruiter.company);
+        const subjectLine = randomizeSubjects
+          ? pickSubject(recruiter.company)
+          : subjectLines!.find((s) => s.id === subjectLineId) || pickSubject(recruiter.company);
 
         // Send a separate email to each target address
         for (const emailAddr of targetEmails) {

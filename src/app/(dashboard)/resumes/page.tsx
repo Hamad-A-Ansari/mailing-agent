@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -38,6 +39,7 @@ export default function ResumesPage() {
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadName, setUploadName] = useState("");
   const [grading, setGrading] = useState<string | null>(null);
   const [gradeResult, setGradeResult] = useState<GradeResult | null>(null);
   const [gradeError, setGradeError] = useState<string | null>(null);
@@ -72,6 +74,9 @@ export default function ResumesPage() {
 
     const formData = new FormData();
     formData.append("file", file);
+    if (uploadName.trim()) {
+      formData.append("display_name", uploadName.trim());
+    }
 
     const res = await fetch("/api/resumes", {
       method: "POST",
@@ -80,6 +85,7 @@ export default function ResumesPage() {
 
     if (res.ok) {
       await fetchResumes();
+      setUploadName("");
     } else {
       setError("Failed to upload resume. Please try again.");
     }
@@ -131,6 +137,12 @@ export default function ResumesPage() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
+            <Input
+              value={uploadName}
+              onChange={(e) => setUploadName(e.target.value)}
+              placeholder="Resume name (e.g. SDE Resume, Frontend Resume)"
+              className="max-w-[300px]"
+            />
             <label className="cursor-pointer inline-flex items-center justify-center rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted transition-colors">
               <input
                 type="file"
@@ -170,7 +182,9 @@ export default function ResumesPage() {
                 <FileText className="h-8 w-8 text-muted-foreground shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium truncate">{resume.filename}</p>
+                    <p className="text-sm font-medium truncate">
+                      {resume.display_name || resume.filename}
+                    </p>
                     {resume.is_default && (
                       <Badge variant="secondary" className="shrink-0 text-yellow-600 bg-yellow-500/10">
                         Default
@@ -178,7 +192,7 @@ export default function ResumesPage() {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {formatFileSize(resume.file_size)} · Uploaded {new Date(resume.created_at).toLocaleDateString()}
+                    {resume.display_name ? resume.filename + " · " : ""}{formatFileSize(resume.file_size)} · Uploaded {new Date(resume.created_at).toLocaleDateString()}
                   </p>
                 </div>
                 <div className="flex gap-1 shrink-0">

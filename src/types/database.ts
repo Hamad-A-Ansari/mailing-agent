@@ -50,6 +50,7 @@ export interface Resume {
   id: string;
   user_id: string;
   filename: string;
+  display_name: string | null;
   storage_path: string;
   file_size: number;
   is_default: boolean;

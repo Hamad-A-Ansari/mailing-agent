@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CheckSquare, Square, ArrowLeft, ArrowRight, Mail, Search, RotateCcw } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import type { Recruiter, RecruiterEmail, TemplateCategory } from "@/types/database";
 
 type RecruiterWithEmails = Recruiter & { recruiter_emails: RecruiterEmail[] };
@@ -45,7 +46,11 @@ export default function SendPage() {
   const [emailTarget, setEmailTarget] = useState<"all" | "company" | "personal">("all");
   const [templateCounts, setTemplateCounts] = useState<Record<string, number>>({});
   const [subjectLineCount, setSubjectLineCount] = useState(0);
-  const [defaultResume, setDefaultResume] = useState<string | null>(null);
+  const [resumes, setResumes] = useState<Array<{ id: string; display_name: string | null; filename: string }>>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+  const [subjectLines, setSubjectLines] = useState<Array<{ id: string; text: string }>>([]);
+  const [randomizeSubjects, setRandomizeSubjects] = useState(true);
+  const [selectedSubjectLineId, setSelectedSubjectLineId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [results, setResults] = useState<SendResult[]>([]);
   const [progress, setProgress] = useState(0);
@@ -89,10 +94,14 @@ export default function SendPage() {
     });
     fetch("/api/subject-lines").then((r) => r.json()).then((data) => {
       setSubjectLineCount(data.activeCount || 0);
+      setSubjectLines((data.subjectLines || []).filter((s: { is_active: boolean }) => s.is_active));
     });
     fetch("/api/resumes").then((r) => r.json()).then((data) => {
-      const def = data.resumes?.find((r: { is_default: boolean }) => r.is_default);
-      setDefaultResume(def?.filename || null);
+      const list = data.resumes || [];
+      setResumes(list);
+      // Default to the one marked as default
+      const def = list.find((r: { is_default: boolean }) => r.is_default);
+      if (def) setSelectedResumeId(def.id);
     });
   }, []);
 
@@ -127,6 +136,9 @@ export default function SendPage() {
           recruiterIds: [...selected],
           templateCategory: category,
           emailTarget,
+          resumeId: selectedResumeId || undefined,
+          randomizeSubjects,
+          subjectLineId: !randomizeSubjects ? selectedSubjectLineId : undefined,
         }),
       });
 
@@ -342,10 +354,28 @@ export default function SendPage() {
                 <span className="text-sm text-muted-foreground">Templates in category</span>
                 <span className="font-medium">{category ? templateCounts[category] || 0 : 0}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Active subject lines</span>
-                <span className="font-medium">{subjectLineCount}</span>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Subject lines</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">{randomizeSubjects ? "Randomize" : "Fixed"}</span>
+                  <Switch checked={randomizeSubjects} onCheckedChange={setRandomizeSubjects} />
+                </div>
               </div>
+              {!randomizeSubjects && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Select subject</span>
+                  <Select value={selectedSubjectLineId ?? undefined} onValueChange={(v) => setSelectedSubjectLineId(v as string)}>
+                    <SelectTrigger className="w-[250px] h-8">
+                      <SelectValue placeholder="Pick a subject line" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subjectLines.map((sl) => (
+                        <SelectItem key={sl.id} value={sl.id}>{sl.text}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Send to</span>
                 <Select value={emailTarget} onValueChange={(v) => setEmailTarget(v as "all" | "company" | "personal")}>
@@ -359,13 +389,22 @@ export default function SendPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Resume attachment</span>
-                <span className="font-medium">{defaultResume || "None"}</span>
+                <Select value={selectedResumeId ?? "none"} onValueChange={(v) => setSelectedResumeId(v === "none" ? null : v as string)}>
+                  <SelectTrigger className="w-[250px] h-8">
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None (no attachment)</SelectItem>
+                    {resumes.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.display_name || r.filename}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              {!defaultResume && (
-                <p className="text-xs text-yellow-600">No default resume set — emails will be sent without attachment.</p>
-              )}
             </CardContent>
           </Card>
 

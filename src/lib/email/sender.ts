@@ -19,6 +19,33 @@ function createTransporter() {
 }
 
 /**
+ * Get a specific resume by ID for email attachment.
+ */
+export async function getResumeById(resumeId: string): Promise<{
+  filename: string;
+  buffer: Buffer;
+} | null> {
+  const supabase = createServerSupabaseClient();
+
+  const { data: resume } = await supabase
+    .from("resumes")
+    .select("*")
+    .eq("id", resumeId)
+    .single();
+
+  if (!resume) return null;
+
+  const { data: fileData, error } = await supabase.storage
+    .from("resumes")
+    .download(resume.storage_path);
+
+  if (error || !fileData) return null;
+
+  const buffer = Buffer.from(await fileData.arrayBuffer());
+  return { filename: resume.filename, buffer };
+}
+
+/**
  * Get the default resume file for email attachment.
  */
 export async function getDefaultResume(): Promise<{

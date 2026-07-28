@@ -65,6 +65,7 @@ export async function POST(request: Request) {
 
   const supabase = createServerSupabaseClient();
   const filename = file.name;
+  const displayName = formData.get("display_name") as string | null;
   const storagePath = `${userId}/${Date.now()}-${filename}`;
 
   // Upload to Supabase Storage
@@ -85,6 +86,7 @@ export async function POST(request: Request) {
     .insert({
       user_id: userId,
       filename,
+      display_name: displayName || null,
       storage_path: storagePath,
       file_size: file.size,
       is_default: false,
