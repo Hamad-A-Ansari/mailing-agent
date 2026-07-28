@@ -10,6 +10,7 @@ import {
   Activity,
   Type,
   Paperclip,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +56,12 @@ const navItems: NavItem[] = [
     label: "Send",
     href: "/send",
     icon: Mail,
+    ownerOnly: true,
+  },
+  {
+    label: "Job Search",
+    href: "/jobs",
+    icon: Search,
     ownerOnly: true,
   },
   {

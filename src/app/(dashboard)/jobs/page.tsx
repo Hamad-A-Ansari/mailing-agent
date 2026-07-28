@@ -1,0 +1,212 @@
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Search, ExternalLink, MapPin, Building2, Briefcase } from "lucide-react";
+
+interface Job {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  department: string;
+  url: string;
+  postedAt: string | null;
+  source: "greenhouse" | "lever";
+}
+
+// Pre-populated company suggestions using Greenhouse/Lever
+const companySuggestions = [
+  "stripe", "airbnb", "discord", "figma", "notion", "coinbase",
+  "doordash", "netlify", "vercel", "linear", "retool",
+  "netflix", "twitch", "reddit", "ramp", "databricks",
+  "plaid", "brex", "rippling", "scale", "anduril",
+];
+
+export default function JobsPage() {
+  const [company, setCompany] = useState("");
+  const [query, setQuery] = useState("");
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [total, setTotal] = useState(0);
+
+  const handleSearch = async () => {
+    if (!company.trim()) return;
+    setLoading(true);
+    setSearched(true);
+
+    const params = new URLSearchParams({ company: company.trim() });
+    if (query.trim()) params.set("query", query.trim());
+
+    const res = await fetch(`/api/jobs?${params}`);
+    if (res.ok) {
+      const data = await res.json();
+      setJobs(data.jobs);
+      setTotal(data.total);
+    } else {
+      setJobs([]);
+      setTotal(0);
+    }
+    setLoading(false);
+  };
+
+  const timeAgo = (dateStr: string | null) => {
+    if (!dateStr) return "";
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    if (days === 0) return "Today";
+    if (days === 1) return "1 day ago";
+    if (days < 30) return `${days} days ago`;
+    return `${Math.floor(days / 30)} months ago`;
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Job Search</h1>
+        <p className="text-muted-foreground">
+          Search open positions directly from company job boards (Greenhouse + Lever).
+        </p>
+      </div>
+
+      {/* Search */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <Building2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                  placeholder="Company name (e.g. stripe, airbnb, discord)"
+                  className="pl-9"
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                />
+              </div>
+              <div className="relative flex-1">
+                <Briefcase className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Role filter (e.g. engineer, intern, product)"
+                  className="pl-9"
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                />
+              </div>
+              <Button onClick={handleSearch} disabled={loading || !company.trim()}>
+                <Search className="mr-1 h-4 w-4" />
+                Search
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {companySuggestions.slice(0, 12).map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  className="text-xs px-2 py-1 rounded-md bg-muted hover:bg-primary/10 hover:text-primary transition-colors capitalize"
+                  onClick={() => { setCompany(c); }}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Results */}
+      {loading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Card key={`skeleton-${i}`}>
+              <CardContent className="py-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-64" />
+                  <div className="flex gap-3">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : searched ? (
+        <>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {total} {total === 1 ? "job" : "jobs"} found
+              {query && ` matching "${query}"`}
+            </p>
+          </div>
+
+          {jobs.length === 0 ? (
+            <p className="text-center py-12 text-muted-foreground">
+              No jobs found. Try a different company name or check the spelling.
+              <br />
+              <span className="text-xs">The company must use Greenhouse or Lever as their ATS.</span>
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {jobs.map((job) => (
+                <Card key={job.id} className="hover:border-primary/30 transition-colors">
+                  <CardContent className="py-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <h3 className="text-sm font-medium">{job.title}</h3>
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Building2 className="h-3 w-3" />
+                            {job.company}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {job.location}
+                          </span>
+                          {job.department && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              {job.department}
+                            </Badge>
+                          )}
+                          {job.postedAt && (
+                            <span>{timeAgo(job.postedAt)}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge variant="outline" className="text-[10px] capitalize">
+                          {job.source}
+                        </Badge>
+                        <a href={job.url} target="_blank" rel="noopener noreferrer">
+                          <Button variant="outline" size="sm">
+                            Apply <ExternalLink className="ml-1 h-3 w-3" />
+                          </Button>
+                        </a>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="text-center py-12">
+          <Search className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+          <p className="text-muted-foreground">
+            Enter a company name to search their open positions.
+          </p>
+          <p className="text-xs text-muted-foreground/60 mt-1">
+            Supports companies using Greenhouse or Lever job boards.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
