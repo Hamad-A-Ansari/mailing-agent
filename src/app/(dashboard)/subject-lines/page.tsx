@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Trash2, Plus } from "lucide-react";
+import { toast } from "@/components/ui/toast";
 import type { SubjectLine } from "@/types/database";
 
 export default function SubjectLinesPage() {
@@ -52,6 +53,7 @@ export default function SubjectLinesPage() {
     setNewText("");
     setAddOpen(false);
     setSubmitting(false);
+    toast.add({ title: "Subject line added", type: "success" });
     fetchSubjectLines();
   };
 
@@ -67,6 +69,7 @@ export default function SubjectLinesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this subject line?")) return;
     await fetch(`/api/subject-lines/${id}`, { method: "DELETE" });
+    toast.add({ title: "Subject line deleted", type: "success" });
     fetchSubjectLines();
   };
 

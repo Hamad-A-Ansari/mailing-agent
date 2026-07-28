@@ -137,7 +137,7 @@ export function RecruiterForm({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEdit ? "Edit Recruiter" : "Add Recruiter"}

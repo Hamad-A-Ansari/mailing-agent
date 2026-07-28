@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Upload, Trash2, Star, FileText, Sparkles, X, Plus } from "lucide-react";
+import { toast } from "@/components/ui/toast";
 import type { Resume } from "@/types/database";
 
 function formatFileSize(bytes: number): string {
@@ -97,6 +98,7 @@ export default function ResumesPage() {
       setUploadOpen(false);
       setUploadName("");
       setUploadFile(null);
+      toast.add({ title: "Resume uploaded", type: "success" });
     } else {
       setUploadError("Failed to upload resume. Please try again.");
     }
@@ -106,12 +108,14 @@ export default function ResumesPage() {
 
   const handleSetDefault = async (id: string) => {
     await fetch(`/api/resumes/${id}`, { method: "PUT" });
+    toast.add({ title: "Default resume updated", type: "success" });
     fetchResumes();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this resume?")) return;
     await fetch(`/api/resumes/${id}`, { method: "DELETE" });
+    toast.add({ title: "Resume deleted", type: "success" });
     fetchResumes();
   };
 

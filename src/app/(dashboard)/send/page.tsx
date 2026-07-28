@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { CheckSquare, Square, ArrowLeft, ArrowRight, Mail, Search, RotateCcw } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Spinner } from "@/components/ui/spinner";
 import type { Recruiter, RecruiterEmail, TemplateCategory } from "@/types/database";
 
 type RecruiterWithEmails = Recruiter & { recruiter_emails: RecruiterEmail[] };
@@ -460,7 +461,8 @@ export default function SendPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-medium">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  {sending && <Spinner className="h-4 w-4" />}
                   {sending ? "Sending emails..." : "Complete"}
                 </p>
                 <span className="text-sm text-muted-foreground">

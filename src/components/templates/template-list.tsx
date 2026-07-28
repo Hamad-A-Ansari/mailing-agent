@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { toast } from "@/components/ui/toast";
 import { TemplateForm } from "./template-form";
 import { TemplatePreview } from "./template-preview";
 import type { EmailTemplate, TemplateCategory } from "@/types/database";
@@ -37,6 +38,7 @@ export function TemplateList() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
+    toast.add({ title: "Template created", type: "success" });
     fetchTemplates();
   };
 
@@ -48,12 +50,14 @@ export function TemplateList() {
       body: JSON.stringify(data),
     });
     setEditingTemplate(undefined);
+    toast.add({ title: "Template updated", type: "success" });
     fetchTemplates();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this template?")) return;
     await fetch(`/api/templates/${id}`, { method: "DELETE" });
+    toast.add({ title: "Template deleted", type: "success" });
     fetchTemplates();
   };
 

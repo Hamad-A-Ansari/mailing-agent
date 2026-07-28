@@ -29,6 +29,7 @@ import { MoreHorizontal, Pencil, Trash2, Copy, Check } from "lucide-react";
 import { RecruiterFilters } from "./recruiter-filters";
 import { RecruiterForm } from "./recruiter-form";
 import { BulkUploadDialog } from "./bulk-upload-dialog";
+import { toast } from "@/components/ui/toast";
 import type { Recruiter, RecruiterEmail, RecruiterStatus } from "@/types/database";
 
 type RecruiterWithEmails = Recruiter & { recruiter_emails: RecruiterEmail[] };
@@ -63,6 +64,7 @@ export function RecruiterTable({ userRole, isDemo = false }: RecruiterTableProps
   const copyEmail = (email: string) => {
     navigator.clipboard.writeText(email);
     setCopiedEmail(email);
+    toast.add({ title: "Email copied", type: "success" });
     setTimeout(() => setCopiedEmail(null), 2000);
   };
 
@@ -116,16 +118,18 @@ export function RecruiterTable({ userRole, isDemo = false }: RecruiterTableProps
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this recruiter?")) return;
+    if (!confirm("Are you sure you want to delete this contact?")) return;
     // Optimistic remove
     const previousRecruiters = recruiters;
     setRecruiters((prev) => prev.filter((r) => r.id !== id));
     setTotal((prev) => prev - 1);
     const res = await fetch(`/api/recruiters/${id}`, { method: "DELETE" });
     if (!res.ok) {
-      // Rollback
       setRecruiters(previousRecruiters);
       setTotal((prev) => prev + 1);
+      toast.add({ title: "Failed to delete contact", type: "error" });
+    } else {
+      toast.add({ title: "Contact deleted", type: "success" });
     }
   };
 
@@ -135,6 +139,7 @@ export function RecruiterTable({ userRole, isDemo = false }: RecruiterTableProps
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
+    toast.add({ title: "Contact added", type: "success" });
     fetchRecruiters();
   };
 
@@ -146,6 +151,7 @@ export function RecruiterTable({ userRole, isDemo = false }: RecruiterTableProps
       body: JSON.stringify(data),
     });
     setEditingRecruiter(undefined);
+    toast.add({ title: "Contact updated", type: "success" });
     fetchRecruiters();
   };
 
