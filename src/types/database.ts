@@ -9,11 +9,22 @@ export interface Recruiter {
   name: string;
   company: string;
   title: string | null;
+  role: ContactRole;
   notes: string | null;
   status: RecruiterStatus;
   created_at: string;
   updated_at: string;
 }
+
+export type ContactRole =
+  | "Recruiter"
+  | "Software Developer"
+  | "Engineering Manager"
+  | "Hiring Manager"
+  | "Director"
+  | "VP"
+  | "Talent Sourcer"
+  | "Other";
 
 export type RecruiterStatus = "Mailed" | "Follow Up" | "Replied" | "No Response";
 

@@ -29,8 +29,8 @@ const navItems: NavItem[] = [
     ownerOnly: true,
   },
   {
-    label: "Recruiters",
-    href: "/recruiters",
+    label: "Contacts",
+    href: "/contacts",
     icon: Users,
     ownerOnly: false,
   },

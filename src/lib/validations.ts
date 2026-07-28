@@ -14,6 +14,7 @@ export const createRecruiterSchema = z.object({
   name: z.string().min(1, "Name is required"),
   company: z.string().min(1, "Company is required"),
   title: z.string().optional().nullable(),
+  role: z.string().default("Recruiter"),
   notes: z.string().optional().nullable(),
   emails: z.array(emailEntrySchema).min(1, "At least one email is required"),
 });

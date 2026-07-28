@@ -13,9 +13,9 @@ export default async function RecruitersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Recruiters</h1>
+        <h1 className="text-2xl font-bold">Contacts</h1>
         <p className="text-muted-foreground">
-          Manage your recruiter contacts and track outreach status.
+          Manage your professional network and track outreach status.
         </p>
       </div>
       <RecruiterTable userRole="owner" isDemo={!isOwner(userId)} />

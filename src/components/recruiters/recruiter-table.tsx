@@ -52,6 +52,7 @@ export function RecruiterTable({ userRole, isDemo = false }: RecruiterTableProps
   const [search, setSearch] = useState("");
   const [company, setCompany] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [roleFilter, setRoleFilter] = useState<string | null>(null);
   const [companies, setCompanies] = useState<string[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
@@ -74,6 +75,7 @@ export function RecruiterTable({ userRole, isDemo = false }: RecruiterTableProps
     if (search) params.set("search", search);
     if (company) params.set("company", company);
     if (status) params.set("status", status);
+    if (roleFilter) params.set("role", roleFilter);
 
     const res = await fetch(`/api/recruiters?${params}`);
     if (res.ok) {
@@ -82,7 +84,7 @@ export function RecruiterTable({ userRole, isDemo = false }: RecruiterTableProps
       setTotal(data.total);
     }
     setLoading(false);
-  }, [page, search, company, status]);
+  }, [page, search, company, status, roleFilter]);
 
   useEffect(() => {
     fetchRecruiters();
@@ -176,6 +178,7 @@ export function RecruiterTable({ userRole, isDemo = false }: RecruiterTableProps
         onSearchChange={(s) => { setSearch(s); setPage(1); }}
         onCompanyChange={(c) => { setCompany(c); setPage(1); }}
         onStatusChange={(s) => { setStatus(s); setPage(1); }}
+        onRoleChange={(r) => { setRoleFilter(r); setPage(1); }}
         onAddClick={() => { setEditingRecruiter(undefined); setFormOpen(true); }}
         onBulkUploadClick={() => setBulkUploadOpen(true)}
         onExportClick={handleExport}
@@ -188,6 +191,7 @@ export function RecruiterTable({ userRole, isDemo = false }: RecruiterTableProps
               <TableHead>Name</TableHead>
               <TableHead>Company</TableHead>
               <TableHead>Title</TableHead>
+              <TableHead>Role</TableHead>
               <TableHead>Company Email</TableHead>
               <TableHead>Personal Email</TableHead>
               <TableHead>Status</TableHead>
@@ -201,6 +205,7 @@ export function RecruiterTable({ userRole, isDemo = false }: RecruiterTableProps
                   <TableCell><Skeleton className="h-4 w-28" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-36" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-36" /></TableCell>
                   <TableCell><Skeleton className="h-7 w-24" /></TableCell>
@@ -209,7 +214,7 @@ export function RecruiterTable({ userRole, isDemo = false }: RecruiterTableProps
               ))
             ) : recruiters.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isOwner ? 7 : 6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={isOwner ? 8 : 7} className="text-center py-8 text-muted-foreground">
                   No recruiters found
                 </TableCell>
               </TableRow>
@@ -223,6 +228,9 @@ export function RecruiterTable({ userRole, isDemo = false }: RecruiterTableProps
                   <TableCell className="font-medium">{recruiter.name}</TableCell>
                   <TableCell>{recruiter.company}</TableCell>
                   <TableCell>{recruiter.title || "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="text-xs">{recruiter.role || "Recruiter"}</Badge>
+                  </TableCell>
                   <TableCell>
                     {companyEmails.length === 0 ? (
                       <span className="text-muted-foreground">—</span>

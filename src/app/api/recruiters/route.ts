@@ -18,6 +18,7 @@ export async function GET(request: Request) {
   const company = searchParams.get("company");
   const status = searchParams.get("status");
   const search = searchParams.get("search");
+  const role = searchParams.get("role");
   const cursor = searchParams.get("cursor"); // cursor-based: created_at of last item
   const cursorId = searchParams.get("cursorId"); // tie-breaker
   const page = parseInt(searchParams.get("page") || "1", 10);
@@ -35,6 +36,9 @@ export async function GET(request: Request) {
   }
   if (status) {
     query = query.eq("status", status);
+  }
+  if (role) {
+    query = query.eq("role", role);
   }
   if (search) {
     query = query.or(`name.ilike.%${search}%,company.ilike.%${search}%`);
@@ -102,13 +106,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const { name, company, title, notes, emails } = parsed.data;
+  const { name, company, title, role, notes, emails } = parsed.data;
   const supabase = createServerSupabaseClient();
 
   // Insert recruiter
   const { data: recruiter, error: recruiterError } = await supabase
     .from("recruiters")
-    .insert({ user_id: userId, name, company, title, notes })
+    .insert({ user_id: userId, name, company, title, role: role || "Recruiter", notes })
     .select()
     .single();
 

@@ -28,10 +28,22 @@ const emailSchema = z.object({
   is_primary: z.boolean(),
 });
 
+const CONTACT_ROLES = [
+  "Recruiter",
+  "Software Developer",
+  "Engineering Manager",
+  "Hiring Manager",
+  "Director",
+  "VP",
+  "Talent Sourcer",
+  "Other",
+] as const;
+
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
   company: z.string().min(1, "Company is required"),
   title: z.string().optional(),
+  role: z.string(),
   notes: z.string().optional(),
   emails: z.array(emailSchema).min(1, "At least one email is required"),
 });
@@ -60,6 +72,7 @@ export function RecruiterForm({
           name: recruiter.name,
           company: recruiter.company,
           title: recruiter.title ?? "",
+          role: recruiter.role ?? "Recruiter",
           notes: recruiter.notes ?? "",
           emails: recruiter.recruiter_emails.map((e) => ({
             email: e.email,
@@ -71,6 +84,7 @@ export function RecruiterForm({
           name: "",
           company: "",
           title: "",
+          role: "Recruiter",
           notes: "",
           emails: [{ email: "", type: "work", is_primary: true }],
         },
@@ -83,6 +97,7 @@ export function RecruiterForm({
         name: recruiter.name,
         company: recruiter.company,
         title: recruiter.title ?? "",
+        role: recruiter.role ?? "Recruiter",
         notes: recruiter.notes ?? "",
         emails: recruiter.recruiter_emails.map((e) => ({
           email: e.email,
@@ -95,6 +110,7 @@ export function RecruiterForm({
         name: "",
         company: "",
         title: "",
+        role: "Recruiter",
         notes: "",
         emails: [{ email: "", type: "work", is_primary: true }],
       });
@@ -106,7 +122,7 @@ export function RecruiterForm({
     name: "emails",
   });
 
-  const handleSubmit = form.handleSubmit(async (data) => {
+  const handleSubmit = form.handleSubmit(async (data: FormValues) => {
     await onSubmit(data);
     form.reset();
     onClose();
@@ -150,11 +166,28 @@ export function RecruiterForm({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Title/Role</label>
+            <label className="text-sm font-medium">Title</label>
             <Input
               {...form.register("title")}
               placeholder="e.g. Senior Recruiter"
             />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Role *</label>
+            <Select
+              value={form.watch("role")}
+              onValueChange={(v) => form.setValue("role", v as string)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select role" />
+              </SelectTrigger>
+              <SelectContent>
+                {CONTACT_ROLES.map((r) => (
+                  <SelectItem key={r} value={r}>{r}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">

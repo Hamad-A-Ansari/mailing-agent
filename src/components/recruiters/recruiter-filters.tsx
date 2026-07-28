@@ -19,6 +19,7 @@ interface RecruiterFiltersProps {
   onSearchChange: (search: string) => void;
   onCompanyChange: (company: string | null) => void;
   onStatusChange: (status: string | null) => void;
+  onRoleChange: (role: string | null) => void;
   onAddClick: () => void;
   onBulkUploadClick: () => void;
   onExportClick: () => void;
@@ -31,6 +32,7 @@ export function RecruiterFilters({
   onSearchChange,
   onCompanyChange,
   onStatusChange,
+  onRoleChange,
   onAddClick,
   onBulkUploadClick,
   onExportClick,
@@ -86,11 +88,28 @@ export function RecruiterFilters({
         </SelectContent>
       </Select>
 
+      <Select onValueChange={(v) => { const val = v as string; onRoleChange(val === "all" ? null : val); }}>
+        <SelectTrigger className="w-[180px]">
+          <SelectValue placeholder="All Roles" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Roles</SelectItem>
+          <SelectItem value="Recruiter">Recruiter</SelectItem>
+          <SelectItem value="Software Developer">Software Developer</SelectItem>
+          <SelectItem value="Engineering Manager">Engineering Manager</SelectItem>
+          <SelectItem value="Hiring Manager">Hiring Manager</SelectItem>
+          <SelectItem value="Director">Director</SelectItem>
+          <SelectItem value="VP">VP</SelectItem>
+          <SelectItem value="Talent Sourcer">Talent Sourcer</SelectItem>
+          <SelectItem value="Other">Other</SelectItem>
+        </SelectContent>
+      </Select>
+
       {isOwner && (
         <>
           <Button onClick={onAddClick} size="sm">
             <Plus className="mr-1 h-4 w-4" />
-            Add Recruiter
+            Add Contact
           </Button>
           <Button onClick={onBulkUploadClick} variant="outline" size="sm">
             <Upload className="mr-1 h-4 w-4" />
