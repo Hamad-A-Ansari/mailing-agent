@@ -362,41 +362,49 @@ export default function SendPage() {
                 </div>
               </div>
               {!randomizeSubjects && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Select subject</span>
-                  <Select value={selectedSubjectLineId ?? undefined} onValueChange={(v) => setSelectedSubjectLineId(v as string)}>
-                    <SelectTrigger className="w-[250px] h-8">
-                      <SelectValue placeholder="Pick a subject line" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {subjectLines.map((sl) => (
-                        <SelectItem key={sl.id} value={sl.id}>{sl.text}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Select subject</span>
+                <Select value={selectedSubjectLineId ?? undefined} onValueChange={(v) => setSelectedSubjectLineId(v as string)}>
+                  <SelectTrigger className="w-[280px] h-8">
+                    <SelectValue placeholder="Pick a subject line">
+                      {selectedSubjectLineId ? subjectLines.find(s => s.id === selectedSubjectLineId)?.text || "Select..." : "Pick a subject line"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subjectLines.map((sl) => (
+                      <SelectItem key={sl.id} value={sl.id}>{sl.text}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               )}
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Send to</span>
                 <Select value={emailTarget} onValueChange={(v) => setEmailTarget(v as "all" | "company" | "personal")}>
-                  <SelectTrigger className="w-[180px] h-8">
-                    <SelectValue />
+                  <SelectTrigger className="w-[200px] h-8">
+                    <SelectValue>
+                      {emailTarget === "all" ? "All Emails" : emailTarget === "company" ? "Company Emails Only" : "Personal Emails Only"}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All emails</SelectItem>
-                    <SelectItem value="company">Company emails only</SelectItem>
-                    <SelectItem value="personal">Personal emails only</SelectItem>
+                    <SelectItem value="all">All Emails</SelectItem>
+                    <SelectItem value="company">Company Emails Only</SelectItem>
+                    <SelectItem value="personal">Personal Emails Only</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Resume attachment</span>
                 <Select value={selectedResumeId ?? "none"} onValueChange={(v) => setSelectedResumeId(v === "none" ? null : v as string)}>
-                  <SelectTrigger className="w-[250px] h-8">
-                    <SelectValue placeholder="None" />
+                  <SelectTrigger className="w-[280px] h-8">
+                    <SelectValue>
+                      {selectedResumeId
+                        ? resumes.find(r => r.id === selectedResumeId)?.display_name || resumes.find(r => r.id === selectedResumeId)?.filename || "Select..."
+                        : "None (no attachment)"}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">None (no attachment)</SelectItem>
+                    <SelectItem value="none">None (No Attachment)</SelectItem>
                     {resumes.map((r) => (
                       <SelectItem key={r.id} value={r.id}>
                         {r.display_name || r.filename}

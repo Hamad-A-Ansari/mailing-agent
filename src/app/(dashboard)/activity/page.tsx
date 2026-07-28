@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -24,15 +25,18 @@ export default function ActivityPage() {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
   const pageSize = 20;
 
   const fetchActivities = useCallback(async () => {
+    setLoading(true);
     const res = await fetch(`/api/activity?page=${page}&pageSize=${pageSize}`);
     if (res.ok) {
       const data = await res.json();
       setActivities(data.activities);
       setTotal(data.total);
     }
+    setLoading(false);
   }, [page]);
 
   useEffect(() => {
@@ -64,7 +68,15 @@ export default function ActivityPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {activities.length === 0 ? (
+            {loading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={`skeleton-${i}`}>
+                  <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-64" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                </TableRow>
+              ))
+            ) : activities.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
                   No activity yet.

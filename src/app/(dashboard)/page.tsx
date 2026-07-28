@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Mail, Activity, Send } from "lucide-react";
 import Link from "next/link";
 
@@ -24,16 +25,20 @@ interface ActivityItem {
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [loadingActivity, setLoadingActivity] = useState(true);
 
   useEffect(() => {
     fetch("/api/stats")
       .then((r) => r.json())
       .then(setStats)
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoadingStats(false));
     fetch("/api/activity?pageSize=20")
       .then((r) => r.json())
       .then((data) => setActivities(data.activities || []))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoadingActivity(false));
   }, []);
 
   const formatAction = (action: string) => {
@@ -60,13 +65,27 @@ export default function DashboardPage() {
 
       {/* Stat Cards */}
       <div className="grid gap-4 md:grid-cols-4">
+        {loadingStats ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <Card key={`stat-skeleton-${i}`}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16" />
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Recruiters</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalRecruiters ?? "—"}</div>
+            <div className="text-2xl font-bold">{stats?.totalRecruiters ?? 0}</div>
           </CardContent>
         </Card>
         <Card>
@@ -75,7 +94,7 @@ export default function DashboardPage() {
             <Mail className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.emailsToday ?? "—"}</div>
+            <div className="text-2xl font-bold">{stats?.emailsToday ?? 0}</div>
           </CardContent>
         </Card>
         <Card>
@@ -84,7 +103,7 @@ export default function DashboardPage() {
             <Send className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.emailsThisWeek ?? "—"}</div>
+            <div className="text-2xl font-bold">{stats?.emailsThisWeek ?? 0}</div>
           </CardContent>
         </Card>
         <Card>
@@ -93,12 +112,12 @@ export default function DashboardPage() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalEmailsSent ?? "—"}</div>
+            <div className="text-2xl font-bold">{stats?.totalEmailsSent ?? 0}</div>
           </CardContent>
         </Card>
+          </>
+        )}
       </div>
-
-      {/* Quick Actions */}
       <div className="flex gap-3">
         <Link href="/send">
           <Button>Send Emails</Button>
@@ -114,7 +133,19 @@ export default function DashboardPage() {
           <CardTitle className="text-base">Recent Activity</CardTitle>
         </CardHeader>
         <CardContent>
-          {activities.length === 0 ? (
+          {loadingActivity ? (
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={`act-skeleton-${i}`} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-5 w-24" />
+                    <Skeleton className="h-4 w-48" />
+                  </div>
+                  <Skeleton className="h-4 w-12" />
+                </div>
+              ))}
+            </div>
+          ) : activities.length === 0 ? (
             <p className="text-sm text-muted-foreground">No activity yet.</p>
           ) : (
             <div className="space-y-3">
