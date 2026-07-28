@@ -1,11 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { PDFParse } from "pdf-parse";
 
 /**
  * POST /api/resumes/[id]/grade
- * Extract text from resume PDF and grade it using Gemini AI.
+ * Grade a resume by sending PDF directly to Gemini as base64 inline data.
  */
 export async function POST(
   _request: Request,
@@ -39,33 +38,19 @@ export async function POST(
     return Response.json({ error: "Failed to download resume" }, { status: 500 });
   }
 
-  // Extract text from PDF using pdf-parse v2/v3
-  let resumeText: string;
-  try {
-    const buffer = Buffer.from(await fileData.arrayBuffer());
-    const parser = new PDFParse({ data: buffer });
-    const result = await parser.getText();
-    resumeText = result.text;
-    await parser.destroy();
-  } catch (err) {
-    console.error("[grade] PDF parse error:", err);
-    return Response.json({ error: "Failed to parse PDF" }, { status: 500 });
-  }
-
-  if (!resumeText || resumeText.trim().length < 50) {
-    return Response.json({ error: "Could not extract enough text from the PDF" }, { status: 400 });
-  }
-
-  // Grade with Gemini
+  // Grade with Gemini — send PDF as inline base64 data
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return Response.json({ error: "Gemini API key not configured" }, { status: 500 });
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = genAI.getGenerativeModel({ model: "models/gemini-2.0-flash" });
 
-  const prompt = `You are an expert resume reviewer and ATS (Applicant Tracking System) specialist. Grade the following resume and provide detailed feedback.
+  const buffer = Buffer.from(await fileData.arrayBuffer());
+  const base64Pdf = buffer.toString("base64");
+
+  const prompt = `You are an expert resume reviewer and ATS (Applicant Tracking System) specialist. Grade the attached resume PDF and provide detailed feedback.
 
 Return your response as valid JSON with this exact structure (no markdown, no code blocks, just raw JSON):
 {
@@ -87,13 +72,19 @@ Scoring criteria:
 - Content (25%): Clear accomplishments, quantified results, relevant details
 - Keywords (20%): Industry-relevant terms, skills mentioned, technical keywords
 - Experience (20%): Relevant experience, progression, impact demonstrated
-- ATS Compatibility (15%): Simple formatting, standard section headers, parseable structure
-
-Resume text:
-${resumeText.substring(0, 8000)}`;
+- ATS Compatibility (15%): Simple formatting, standard section headers, parseable structure`;
 
   try {
-    const result = await model.generateContent(prompt);
+    const result = await model.generateContent([
+      { text: prompt },
+      {
+        inlineData: {
+          mimeType: "application/pdf",
+          data: base64Pdf,
+        },
+      },
+    ]);
+
     const responseText = result.response.text();
 
     // Parse JSON from response (handle possible markdown code blocks)
