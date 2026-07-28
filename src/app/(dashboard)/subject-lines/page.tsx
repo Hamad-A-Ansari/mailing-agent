@@ -6,6 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Trash2, Plus } from "lucide-react";
 import type { SubjectLine } from "@/types/database";
 
@@ -13,10 +20,13 @@ export default function SubjectLinesPage() {
   const [subjectLines, setSubjectLines] = useState<SubjectLine[]>([]);
   const [activeCount, setActiveCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [addOpen, setAddOpen] = useState(false);
   const [newText, setNewText] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchSubjectLines = useCallback(async () => {
+    setLoading(true);
     const res = await fetch("/api/subject-lines");
     if (res.ok) {
       const data = await res.json();
@@ -24,6 +34,7 @@ export default function SubjectLinesPage() {
       setActiveCount(data.activeCount);
       setTotalCount(data.totalCount);
     }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -32,15 +43,16 @@ export default function SubjectLinesPage() {
 
   const handleAdd = async () => {
     if (!newText.trim()) return;
-    setLoading(true);
+    setSubmitting(true);
     await fetch("/api/subject-lines", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: newText }),
     });
     setNewText("");
-    await fetchSubjectLines();
-    setLoading(false);
+    setAddOpen(false);
+    setSubmitting(false);
+    fetchSubjectLines();
   };
 
   const handleToggle = async (id: string, currentActive: boolean) => {
@@ -67,36 +79,33 @@ export default function SubjectLinesPage() {
         </p>
       </div>
 
-      {/* Add form */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-2">
-            <Input
-              value={newText}
-              onChange={(e) => setNewText(e.target.value)}
-              placeholder="Enter a new subject line..."
-              onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-            />
-            <Button onClick={handleAdd} disabled={loading || !newText.trim()}>
-              <Plus className="mr-1 h-4 w-4" />
-              Add
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Active count */}
-      <div className="flex items-center gap-2">
+      {/* Header with count + add button */}
+      <div className="flex items-center justify-between">
         <Badge variant="outline" className="text-sm">
           {activeCount} of {totalCount} active
         </Badge>
+        <Button size="sm" onClick={() => setAddOpen(true)}>
+          <Plus className="mr-1 h-4 w-4" />
+          Add Subject Line
+        </Button>
       </div>
 
       {/* Subject line list */}
       <div className="space-y-2">
-        {subjectLines.length === 0 ? (
-          <p className="text-center py-8 text-muted-foreground">
-            No subject lines yet. Add one above.
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <Card key={`skeleton-${i}`}>
+              <CardContent className="flex items-center gap-4 py-3">
+                <Skeleton className="h-5 w-10 rounded-full" />
+                <Skeleton className="h-4 flex-1" />
+                <Skeleton className="h-5 w-16" />
+                <Skeleton className="h-7 w-7" />
+              </CardContent>
+            </Card>
+          ))
+        ) : subjectLines.length === 0 ? (
+          <p className="text-center py-12 text-muted-foreground">
+            No subject lines yet. Click "Add Subject Line" to create one.
           </p>
         ) : (
           subjectLines.map((sl) => (
@@ -124,6 +133,34 @@ export default function SubjectLinesPage() {
           ))
         )}
       </div>
+
+      {/* Add Dialog */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Subject Line</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Subject Line *</label>
+              <Input
+                value={newText}
+                onChange={(e) => setNewText(e.target.value)}
+                placeholder="e.g. Your Next Best Hire"
+                onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setAddOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleAdd} disabled={submitting || !newText.trim()}>
+                {submitting ? "Adding..." : "Add"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

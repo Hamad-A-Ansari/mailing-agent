@@ -6,7 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Upload, Trash2, Star, FileText, Sparkles, X } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Upload, Trash2, Star, FileText, Sparkles, X, Plus } from "lucide-react";
 import type { Resume } from "@/types/database";
 
 function formatFileSize(bytes: number): string {
@@ -37,46 +44,48 @@ function getScoreColor(score: number): string {
 
 export default function ResumesPage() {
   const [resumes, setResumes] = useState<Resume[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadName, setUploadName] = useState("");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [grading, setGrading] = useState<string | null>(null);
   const [gradeResult, setGradeResult] = useState<GradeResult | null>(null);
   const [gradeError, setGradeError] = useState<string | null>(null);
 
   const fetchResumes = useCallback(async () => {
+    setLoading(true);
     const res = await fetch("/api/resumes");
     if (res.ok) {
       const data = await res.json();
       setResumes(data.resumes || []);
     }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
     fetchResumes();
   }, [fetchResumes]);
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleUpload = async () => {
+    if (!uploadFile || !uploadName.trim()) return;
 
-    if (file.type !== "application/pdf") {
-      setError("Only PDF files are allowed.");
+    if (uploadFile.type !== "application/pdf") {
+      setUploadError("Only PDF files are allowed.");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setError("File exceeds 5MB limit.");
+    if (uploadFile.size > 5 * 1024 * 1024) {
+      setUploadError("File exceeds 5MB limit.");
       return;
     }
 
-    setError(null);
+    setUploadError(null);
     setUploading(true);
 
     const formData = new FormData();
-    formData.append("file", file);
-    if (uploadName.trim()) {
-      formData.append("display_name", uploadName.trim());
-    }
+    formData.append("file", uploadFile);
+    formData.append("display_name", uploadName.trim());
 
     const res = await fetch("/api/resumes", {
       method: "POST",
@@ -85,13 +94,14 @@ export default function ResumesPage() {
 
     if (res.ok) {
       await fetchResumes();
+      setUploadOpen(false);
       setUploadName("");
+      setUploadFile(null);
     } else {
-      setError("Failed to upload resume. Please try again.");
+      setUploadError("Failed to upload resume. Please try again.");
     }
 
     setUploading(false);
-    e.target.value = "";
   };
 
   const handleSetDefault = async (id: string) => {
@@ -133,47 +143,43 @@ export default function ResumesPage() {
         </p>
       </div>
 
-      {/* Upload area */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-4">
-            <Input
-              value={uploadName}
-              onChange={(e) => setUploadName(e.target.value)}
-              placeholder="Resume name (e.g. SDE Resume, Frontend Resume)"
-              className="max-w-[300px]"
-            />
-            <label className="cursor-pointer inline-flex items-center justify-center rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted transition-colors">
-              <input
-                type="file"
-                accept=".pdf"
-                onChange={handleUpload}
-                className="hidden"
-                disabled={uploading}
-              />
-              <Upload className="mr-2 h-4 w-4" />
-              {uploading ? "Uploading..." : "Upload PDF"}
-            </label>
-            <p className="text-xs text-muted-foreground">PDF only, max 5MB</p>
+      {/* Header with default info + upload button */}
+      <div className="flex items-center justify-between">
+        {defaultResume ? (
+          <div className="flex items-center gap-2 text-sm">
+            <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+            <span className="text-muted-foreground">Default:</span>
+            <span className="font-medium">{defaultResume.display_name || defaultResume.filename}</span>
           </div>
-          {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
-        </CardContent>
-      </Card>
-
-      {/* Current default */}
-      {defaultResume && (
-        <div className="flex items-center gap-2 text-sm">
-          <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-          <span className="text-muted-foreground">Default attachment:</span>
-          <span className="font-medium">{defaultResume.filename}</span>
-        </div>
-      )}
+        ) : (
+          <span className="text-sm text-muted-foreground">No default resume set</span>
+        )}
+        <Button size="sm" onClick={() => setUploadOpen(true)}>
+          <Plus className="mr-1 h-4 w-4" />
+          Upload Resume
+        </Button>
+      </div>
 
       {/* Resume list */}
       <div className="space-y-2">
-        {resumes.length === 0 ? (
+        {loading ? (
+          Array.from({ length: 2 }).map((_, i) => (
+            <Card key={`skeleton-${i}`}>
+              <CardContent className="flex items-center gap-4 py-4">
+                <Skeleton className="h-8 w-8" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-8 w-8" />
+                <Skeleton className="h-8 w-8" />
+              </CardContent>
+            </Card>
+          ))
+        ) : resumes.length === 0 ? (
           <p className="text-center py-12 text-muted-foreground">
-            No resumes uploaded yet. Upload a PDF above.
+            No resumes uploaded yet. Click "Upload Resume" to add one.
           </p>
         ) : (
           resumes.map((resume) => (
@@ -204,7 +210,7 @@ export default function ResumesPage() {
                     title="Grade with AI"
                   >
                     <Sparkles className="h-3.5 w-3.5 mr-1" />
-                    {grading === resume.id ? "Grading..." : "Grade"}
+                    {grading === resume.id ? "..." : "Grade"}
                   </Button>
                   {!resume.is_default && (
                     <Button
@@ -252,7 +258,6 @@ export default function ResumesPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Overall score */}
             <div className="text-center">
               <span className={`text-5xl font-bold ${getScoreColor(gradeResult.score)}`}>
                 {gradeResult.score}
@@ -261,7 +266,6 @@ export default function ResumesPage() {
               <p className="text-sm text-muted-foreground mt-2">{gradeResult.summary}</p>
             </div>
 
-            {/* Section scores */}
             <div className="space-y-4">
               {Object.entries(gradeResult.sections).map(([key, section]) => (
                 <div key={key} className="space-y-1">
@@ -277,7 +281,6 @@ export default function ResumesPage() {
               ))}
             </div>
 
-            {/* Strengths & Improvements */}
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <h4 className="text-sm font-medium mb-2 text-green-500">Strengths</h4>
@@ -303,6 +306,53 @@ export default function ResumesPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Upload Dialog */}
+      <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upload Resume</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Resume Name *</label>
+              <Input
+                value={uploadName}
+                onChange={(e) => setUploadName(e.target.value)}
+                placeholder="e.g. SDE Resume, Frontend Resume"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">PDF File *</label>
+              <div className="flex items-center gap-3">
+                <label className="cursor-pointer inline-flex items-center justify-center rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted transition-colors">
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                    className="hidden"
+                  />
+                  <Upload className="mr-2 h-4 w-4" />
+                  Choose File
+                </label>
+                <span className="text-sm text-muted-foreground truncate">
+                  {uploadFile ? uploadFile.name : "No file chosen"}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">PDF only, max 5MB</p>
+            </div>
+            {uploadError && <p className="text-sm text-destructive">{uploadError}</p>}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => { setUploadOpen(false); setUploadFile(null); setUploadName(""); setUploadError(null); }}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpload} disabled={uploading || !uploadFile || !uploadName.trim()}>
+                {uploading ? "Uploading..." : "Upload"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
