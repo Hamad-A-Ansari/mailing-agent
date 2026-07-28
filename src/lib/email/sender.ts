@@ -123,7 +123,7 @@ function pickSubjectLines(
  * Random delay between 5-10 seconds.
  */
 function randomDelay(): Promise<void> {
-  const ms = 5000 + Math.random() * 5000;
+  const ms = 3000 + Math.random() * 3000;
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 

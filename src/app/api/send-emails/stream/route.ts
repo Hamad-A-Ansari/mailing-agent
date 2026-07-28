@@ -196,7 +196,7 @@ export async function POST(request: Request) {
           }
 
           // Delay between each individual email
-          const delay = 5000 + Math.random() * 5000;
+          const delay = 3000 + Math.random() * 3000;
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
 
