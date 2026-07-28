@@ -8,12 +8,12 @@ interface JobResult {
   department: string;
   url: string;
   postedAt: string | null;
-  source: "greenhouse" | "lever";
+  source: "greenhouse" | "lever" | "ashby" | "smartrecruiters";
 }
 
 /**
  * GET /api/jobs?company=stripe&query=engineer
- * Search jobs from Greenhouse and Lever public APIs.
+ * Search jobs from Greenhouse, Lever, Ashby, and SmartRecruiters public APIs.
  */
 export async function GET(request: Request) {
   const { userId } = await auth();
@@ -29,67 +29,21 @@ export async function GET(request: Request) {
     return Response.json({ error: "Company name is required" }, { status: 400 });
   }
 
+  const companyDisplay = company.charAt(0).toUpperCase() + company.slice(1);
   const jobs: JobResult[] = [];
 
-  // Try Greenhouse
-  try {
-    const ghRes = await fetch(
-      `https://boards-api.greenhouse.io/v1/boards/${company}/jobs?content=true`,
-      { next: { revalidate: 300 } } // Cache for 5 minutes
-    );
-    if (ghRes.ok) {
-      const ghData = await ghRes.json();
-      const ghJobs: JobResult[] = (ghData.jobs || []).map((job: {
-        id: number;
-        title: string;
-        location: { name: string };
-        departments: Array<{ name: string }>;
-        absolute_url: string;
-        updated_at: string;
-      }) => ({
-        id: `gh-${job.id}`,
-        title: job.title,
-        company: company.charAt(0).toUpperCase() + company.slice(1),
-        location: job.location?.name || "Not specified",
-        department: job.departments?.[0]?.name || "",
-        url: job.absolute_url,
-        postedAt: job.updated_at || null,
-        source: "greenhouse" as const,
-      }));
-      jobs.push(...ghJobs);
-    }
-  } catch {
-    // Greenhouse failed — continue to Lever
-  }
+  // Fetch from all 4 sources in parallel
+  const results = await Promise.allSettled([
+    fetchGreenhouse(company, companyDisplay),
+    fetchLever(company, companyDisplay),
+    fetchAshby(company, companyDisplay),
+    fetchSmartRecruiters(company, companyDisplay),
+  ]);
 
-  // Try Lever
-  try {
-    const leverRes = await fetch(
-      `https://api.lever.co/v0/postings/${company}`,
-      { next: { revalidate: 300 } }
-    );
-    if (leverRes.ok) {
-      const leverData = await leverRes.json();
-      const leverJobs: JobResult[] = (leverData || []).map((job: {
-        id: string;
-        text: string;
-        categories: { location: string; team: string; department: string };
-        hostedUrl: string;
-        createdAt: number;
-      }) => ({
-        id: `lever-${job.id}`,
-        title: job.text,
-        company: company.charAt(0).toUpperCase() + company.slice(1),
-        location: job.categories?.location || "Not specified",
-        department: job.categories?.team || job.categories?.department || "",
-        url: job.hostedUrl,
-        postedAt: job.createdAt ? new Date(job.createdAt).toISOString() : null,
-        source: "lever" as const,
-      }));
-      jobs.push(...leverJobs);
+  for (const result of results) {
+    if (result.status === "fulfilled") {
+      jobs.push(...result.value);
     }
-  } catch {
-    // Lever failed — continue
   }
 
   // Filter by query if provided
@@ -113,6 +67,142 @@ export async function GET(request: Request) {
   return Response.json({
     jobs: filtered,
     total: filtered.length,
-    source: jobs.length > 0 ? (jobs[0].source === "greenhouse" ? "Greenhouse" : "Lever") : null,
+    sources: [...new Set(jobs.map((j) => j.source))],
   });
+}
+
+// ============================================================
+// Greenhouse
+// ============================================================
+async function fetchGreenhouse(company: string, companyDisplay: string): Promise<JobResult[]> {
+  try {
+    const res = await fetch(
+      `https://boards-api.greenhouse.io/v1/boards/${company}/jobs?content=true`,
+      { next: { revalidate: 300 } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.jobs || []).map((job: {
+      id: number;
+      title: string;
+      location: { name: string };
+      departments: Array<{ name: string }>;
+      absolute_url: string;
+      updated_at: string;
+    }) => ({
+      id: `gh-${job.id}`,
+      title: job.title,
+      company: companyDisplay,
+      location: job.location?.name || "Not specified",
+      department: job.departments?.[0]?.name || "",
+      url: job.absolute_url,
+      postedAt: job.updated_at || null,
+      source: "greenhouse" as const,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ============================================================
+// Lever
+// ============================================================
+async function fetchLever(company: string, companyDisplay: string): Promise<JobResult[]> {
+  try {
+    const res = await fetch(
+      `https://api.lever.co/v0/postings/${company}`,
+      { next: { revalidate: 300 } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data || []).map((job: {
+      id: string;
+      text: string;
+      categories: { location: string; team: string; department: string };
+      hostedUrl: string;
+      createdAt: number;
+    }) => ({
+      id: `lever-${job.id}`,
+      title: job.text,
+      company: companyDisplay,
+      location: job.categories?.location || "Not specified",
+      department: job.categories?.team || job.categories?.department || "",
+      url: job.hostedUrl,
+      postedAt: job.createdAt ? new Date(job.createdAt).toISOString() : null,
+      source: "lever" as const,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ============================================================
+// Ashby
+// ============================================================
+async function fetchAshby(company: string, companyDisplay: string): Promise<JobResult[]> {
+  try {
+    const res = await fetch(
+      `https://api.ashbyhq.com/posting-api/job-board/${company}`,
+      { next: { revalidate: 300 } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.jobs || []).map((job: {
+      id: string;
+      title: string;
+      location: string;
+      department: string;
+      publishedAt: string;
+      jobUrl: string;
+    }) => ({
+      id: `ashby-${job.id}`,
+      title: job.title,
+      company: companyDisplay,
+      location: job.location || "Not specified",
+      department: job.department || "",
+      url: job.jobUrl || `https://jobs.ashbyhq.com/${company}/${job.id}`,
+      postedAt: job.publishedAt || null,
+      source: "ashby" as const,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ============================================================
+// SmartRecruiters
+// ============================================================
+async function fetchSmartRecruiters(company: string, companyDisplay: string): Promise<JobResult[]> {
+  try {
+    const res = await fetch(
+      `https://api.smartrecruiters.com/v1/companies/${company}/postings`,
+      { next: { revalidate: 300 } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.content || []).map((job: {
+      id: string;
+      name: string;
+      location: { city: string; region: string; country: string };
+      department: { label: string };
+      releasedDate: string;
+      ref: string;
+    }) => {
+      const loc = job.location
+        ? [job.location.city, job.location.region, job.location.country].filter(Boolean).join(", ")
+        : "Not specified";
+      return {
+        id: `sr-${job.id}`,
+        title: job.name,
+        company: companyDisplay,
+        location: loc,
+        department: job.department?.label || "",
+        url: job.ref || `https://jobs.smartrecruiters.com/${company}/${job.id}`,
+        postedAt: job.releasedDate || null,
+        source: "smartrecruiters" as const,
+      };
+    });
+  } catch {
+    return [];
+  }
 }

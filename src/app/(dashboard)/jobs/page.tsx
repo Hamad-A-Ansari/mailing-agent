@@ -23,15 +23,17 @@ interface Job {
   department: string;
   url: string;
   postedAt: string | null;
-  source: "greenhouse" | "lever";
+  source: "greenhouse" | "lever" | "ashby" | "smartrecruiters";
 }
 
-// Pre-populated company suggestions using Greenhouse/Lever
+// Pre-populated company suggestions (Greenhouse/Lever/Ashby/SmartRecruiters)
 const companySuggestions = [
   "stripe", "airbnb", "discord", "figma", "notion", "coinbase",
-  "doordash", "netlify", "vercel", "linear", "retool",
+  "doordash", "netlify", "openai", "linear", "retool",
   "netflix", "twitch", "reddit", "ramp", "databricks",
   "plaid", "brex", "rippling", "scale", "anduril",
+  "vercel", "cursor", "deel", "vanta", "snowflake",
+  "visa", "bosch", "skechers", "linkedin",
 ];
 
 export default function JobsPage() {
@@ -92,7 +94,7 @@ export default function JobsPage() {
       <div>
         <h1 className="text-2xl font-bold">Job Search</h1>
         <p className="text-muted-foreground">
-          Search open positions directly from company job boards (Greenhouse + Lever).
+          Search open positions directly from company job boards (Greenhouse, Lever, Ashby, SmartRecruiters).
         </p>
       </div>
 
@@ -204,7 +206,7 @@ export default function JobsPage() {
             <p className="text-center py-12 text-muted-foreground">
               No jobs found. Try a different company name or check the spelling.
               <br />
-              <span className="text-xs">The company must use Greenhouse or Lever as their ATS.</span>
+              <span className="text-xs">Supports companies using Greenhouse, Lever, Ashby, or SmartRecruiters.</span>
             </p>
           ) : (
             <div className="space-y-2">
