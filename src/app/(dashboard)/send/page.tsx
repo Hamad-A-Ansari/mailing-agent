@@ -57,6 +57,7 @@ export default function SendPage() {
   const [search, setSearch] = useState("");
   const [companyFilter, setCompanyFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [roleFilter, setRoleFilter] = useState<string | null>(null);
   const [isDemo, setIsDemo] = useState(false);
 
   // Check if user is in demo mode
@@ -72,12 +73,13 @@ export default function SendPage() {
     if (search) params.set("search", search);
     if (companyFilter) params.set("company", companyFilter);
     if (statusFilter) params.set("status", statusFilter);
+    if (roleFilter) params.set("role", roleFilter);
     const res = await fetch(`/api/recruiters?${params}`);
     if (res.ok) {
       const data = await res.json();
       setRecruiters(data.recruiters);
     }
-  }, [search, companyFilter, statusFilter]);
+  }, [search, companyFilter, statusFilter, roleFilter]);
 
   useEffect(() => {
     fetchRecruiters();
@@ -246,6 +248,22 @@ export default function SendPage() {
                 <SelectItem value="Follow Up">Follow Up</SelectItem>
                 <SelectItem value="Mailed">Mailed</SelectItem>
                 <SelectItem value="Replied">Replied</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select onValueChange={(v) => setRoleFilter(v === "all" ? null : v as string)}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                <SelectItem value="Recruiter">Recruiter</SelectItem>
+                <SelectItem value="Software Developer">Software Developer</SelectItem>
+                <SelectItem value="Engineering Manager">Eng. Manager</SelectItem>
+                <SelectItem value="Hiring Manager">Hiring Manager</SelectItem>
+                <SelectItem value="Director">Director</SelectItem>
+                <SelectItem value="VP">VP</SelectItem>
+                <SelectItem value="Talent Sourcer">Talent Sourcer</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
               </SelectContent>
             </Select>
           </div>
