@@ -217,101 +217,100 @@ export async function sendBulkOutreach(
     const template = templateAssignments.get(recruiter.id)!;
     const subjectLine = subjectAssignments.get(recruiter.id)!;
 
-    const toAddress = targetEmails.join(", ");
+    // Send a separate email to each target address (no CC/multi-To)
+    for (let j = 0; j < targetEmails.length; j++) {
+      const emailAddr = targetEmails[j];
 
-    // Build variable data
-    const variableData: Record<string, string> = {
-      "recruiter.firstname": recruiter.name.trim().split(/\s+/)[0] || recruiter.name,
-      "recruiter.company": recruiter.company,
-      "recruiter.title": recruiter.title || "",
-      "recruiter.email": targetEmails[0],
-    };
-
-    const body = injectVariables(template.body, variableData).replace(/\n{3,}/g, "\n\n");
-    const subject = injectVariables(subjectLine.text, variableData);
-
-    try {
-      const mailOptions: nodemailer.SendMailOptions = {
-        from: process.env.SMTP_USER,
-        to: toAddress,
-        subject,
-        text: body,
+      // Build variable data
+      const variableData: Record<string, string> = {
+        "recruiter.firstname": recruiter.name.trim().split(/\s+/)[0] || recruiter.name,
+        "recruiter.name": recruiter.name.trim().split(/\s+/)[0] || recruiter.name,
+        "recruiter.company": recruiter.company,
+        "recruiter.title": recruiter.title || "",
+        "recruiter.email": emailAddr,
       };
 
-      if (resume) {
-        mailOptions.attachments = [
-          {
-            filename: resume.filename,
-            content: resume.buffer,
-          },
-        ];
+      const body = injectVariables(template.body, variableData).replace(/\n{3,}/g, "\n\n");
+      const subject = injectVariables(subjectLine.text, variableData);
+
+      try {
+        const mailOptions: nodemailer.SendMailOptions = {
+          from: process.env.SMTP_USER,
+          to: emailAddr,
+          subject,
+          text: body,
+        };
+
+        if (resume) {
+          mailOptions.attachments = [
+            { filename: resume.filename, content: resume.buffer },
+          ];
+        }
+
+        await transporter.sendMail(mailOptions);
+
+        await supabase.from("email_logs").insert({
+          user_id: userId,
+          recruiter_id: recruiter.id,
+          template_id: template.id,
+          subject_line_id: subjectLine.id,
+          to_email: emailAddr,
+          subject,
+          body,
+          status: "sent",
+        });
+
+        results.push({
+          recruiterId: recruiter.id,
+          recruiterName: recruiter.name,
+          email: emailAddr,
+          templateUsed: template.name,
+          subjectUsed: subject,
+          status: "sent",
+        });
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Send failed";
+
+        await supabase.from("email_logs").insert({
+          user_id: userId,
+          recruiter_id: recruiter.id,
+          template_id: template.id,
+          subject_line_id: subjectLine.id,
+          to_email: emailAddr,
+          subject,
+          body,
+          status: "failed",
+          error_message: errorMessage,
+        });
+
+        results.push({
+          recruiterId: recruiter.id,
+          recruiterName: recruiter.name,
+          email: emailAddr,
+          templateUsed: template.name,
+          subjectUsed: subject,
+          status: "failed",
+          error: errorMessage,
+        });
       }
 
-      await transporter.sendMail(mailOptions);
-
-      // Log success
-      await supabase.from("email_logs").insert({
-        user_id: userId,
-        recruiter_id: recruiter.id,
-        template_id: template.id,
-        subject_line_id: subjectLine.id,
-        to_email: toAddress,
-        subject,
-        body,
-        status: "sent",
-      });
-
-      // Update recruiter status
-      await supabase
-        .from("recruiters")
-        .update({ status: "Mailed" })
-        .eq("id", recruiter.id);
-
-      // Increment subject line usage
-      await supabase
-        .from("subject_lines")
-        .update({ usage_count: subjectLine.usage_count + 1 })
-        .eq("id", subjectLine.id);
-
-      results.push({
-        recruiterId: recruiter.id,
-        recruiterName: recruiter.name,
-        email: toAddress,
-        templateUsed: template.name,
-        subjectUsed: subject,
-        status: "sent",
-      });
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Send failed";
-
-      // Log failure
-      await supabase.from("email_logs").insert({
-        user_id: userId,
-        recruiter_id: recruiter.id,
-        template_id: template.id,
-        subject_line_id: subjectLine.id,
-        to_email: toAddress,
-        subject,
-        body,
-        status: "failed",
-        error_message: errorMessage,
-      });
-
-      results.push({
-        recruiterId: recruiter.id,
-        recruiterName: recruiter.name,
-        email: toAddress,
-        templateUsed: template.name,
-        subjectUsed: subject,
-        status: "failed",
-        error: errorMessage,
-      });
+      // Delay between each individual email
+      if (j < targetEmails.length - 1 || i < recruiters.length - 1) {
+        await randomDelay();
+      }
     }
 
-    // Delay between sends (skip after last)
-    if (i < recruiters.length - 1) {
-      await randomDelay();
+    // Update recruiter status if at least one email sent
+    const anySent = results.some((r) => r.recruiterId === recruiter.id && r.status === "sent");
+    if (anySent) {
+      await supabase.from("recruiters").update({ status: "Mailed" }).eq("id", recruiter.id);
     }
+
+    // Increment subject line usage once per recruiter
+    await supabase
+      .from("subject_lines")
+      .update({ usage_count: subjectLine.usage_count + 1 })
+      .eq("id", subjectLine.id);
   }
 
   return {
