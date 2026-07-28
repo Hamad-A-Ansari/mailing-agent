@@ -7,6 +7,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, ExternalLink, MapPin, Building2, Briefcase } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Job {
   id: string;
@@ -34,11 +41,15 @@ export default function JobsPage() {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [total, setTotal] = useState(0);
+  const [locationFilter, setLocationFilter] = useState<string | null>(null);
+  const [departmentFilter, setDepartmentFilter] = useState<string | null>(null);
 
   const handleSearch = async () => {
     if (!company.trim()) return;
     setLoading(true);
     setSearched(true);
+    setLocationFilter(null);
+    setDepartmentFilter(null);
 
     const params = new URLSearchParams({ company: company.trim() });
     if (query.trim()) params.set("query", query.trim());
@@ -54,6 +65,17 @@ export default function JobsPage() {
     }
     setLoading(false);
   };
+
+  // Derive unique locations and departments for filters
+  const uniqueLocations = [...new Set(jobs.map((j) => j.location))].sort();
+  const uniqueDepartments = [...new Set(jobs.map((j) => j.department).filter(Boolean))].sort();
+
+  // Apply client-side filters
+  const filteredJobs = jobs.filter((job) => {
+    if (locationFilter && job.location !== locationFilter) return false;
+    if (departmentFilter && job.department !== departmentFilter) return false;
+    return true;
+  });
 
   const timeAgo = (dateStr: string | null) => {
     if (!dateStr) return "";
@@ -139,14 +161,46 @@ export default function JobsPage() {
         </div>
       ) : searched ? (
         <>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <p className="text-sm text-muted-foreground">
-              {total} {total === 1 ? "job" : "jobs"} found
+              {filteredJobs.length} of {total} {total === 1 ? "job" : "jobs"}
               {query && ` matching "${query}"`}
             </p>
+            <div className="flex gap-2">
+              {uniqueLocations.length > 1 && (
+                <Select value={locationFilter ?? "all"} onValueChange={(v) => setLocationFilter(v === "all" ? null : v as string)}>
+                  <SelectTrigger className="w-[200px] h-8">
+                    <SelectValue>
+                      {locationFilter || "All Locations"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Locations</SelectItem>
+                    {uniqueLocations.map((loc) => (
+                      <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {uniqueDepartments.length > 1 && (
+                <Select value={departmentFilter ?? "all"} onValueChange={(v) => setDepartmentFilter(v === "all" ? null : v as string)}>
+                  <SelectTrigger className="w-[200px] h-8">
+                    <SelectValue>
+                      {departmentFilter || "All Departments"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Departments</SelectItem>
+                    {uniqueDepartments.map((dep) => (
+                      <SelectItem key={dep} value={dep}>{dep}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
 
-          {jobs.length === 0 ? (
+          {filteredJobs.length === 0 ? (
             <p className="text-center py-12 text-muted-foreground">
               No jobs found. Try a different company name or check the spelling.
               <br />
@@ -154,7 +208,7 @@ export default function JobsPage() {
             </p>
           ) : (
             <div className="space-y-2">
-              {jobs.map((job) => (
+              {filteredJobs.map((job) => (
                 <Card key={job.id} className="hover:border-primary/30 transition-colors">
                   <CardContent className="py-4">
                     <div className="flex items-start justify-between gap-4">
