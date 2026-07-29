@@ -407,9 +407,9 @@ export default function ApplicationsPage() {
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">Interview Date</label>
                   <Input
-                    type="datetime-local"
+                    type="date"
                     className="h-8 text-xs"
-                    value={detailApp.interview_date ? new Date(detailApp.interview_date).toISOString().slice(0, 16) : ""}
+                    value={detailApp.interview_date ? new Date(detailApp.interview_date).toISOString().split("T")[0] : ""}
                     onChange={(e) => { const val = e.target.value ? new Date(e.target.value).toISOString() : null; handleUpdateDetail("interview_date", val); setDetailApp({ ...detailApp, interview_date: val }); }}
                   />
                 </div>
@@ -477,7 +477,7 @@ export default function ApplicationsPage() {
 
       {/* Add Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Add Application</DialogTitle>
           </DialogHeader>
@@ -524,7 +524,11 @@ export default function ApplicationsPage() {
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Resume</label>
                 <Select value={formData.resume_id || "none"} onValueChange={(v) => setFormData({ ...formData, resume_id: v === "none" ? null : v })}>
-                  <SelectTrigger className="text-xs"><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectTrigger className="text-xs h-9">
+                    <SelectValue>
+                      {formData.resume_id ? getResumeName(formData.resume_id) || "Select..." : "None"}
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
                     {resumes.map((r) => (<SelectItem key={r.id} value={r.id}>{r.display_name || r.filename}</SelectItem>))}
@@ -534,7 +538,11 @@ export default function ApplicationsPage() {
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Contact</label>
                 <Select value={formData.contact_id || "none"} onValueChange={(v) => setFormData({ ...formData, contact_id: v === "none" ? null : v })}>
-                  <SelectTrigger className="text-xs"><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectTrigger className="text-xs h-9">
+                    <SelectValue>
+                      {formData.contact_id ? getContactName(formData.contact_id) || "Select..." : "None"}
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
                     {contacts.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
