@@ -47,6 +47,7 @@ import {
 import { toast } from "@/components/ui/toast";
 import { Plus, Trash2, ExternalLink, ArrowRight, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -244,91 +245,94 @@ export default function ApplicationsPage() {
           ))}
         </div>
       ) : (
-        <div className="overflow-x-auto scrollbar-none pb-2">
-          <Kanban
-            value={columns}
-            onValueChange={handleKanbanChange}
-            getItemValue={(item) => item.id}
-          >
-            <KanbanBoard className="flex gap-3">
-              {STAGES.map((stage) => (
-                <KanbanColumn key={stage} value={stage} className="min-w-[240px] max-w-[240px] shrink-0">
-                  <div className="flex flex-col rounded-lg bg-muted/40 border border-border/50 p-2 h-full">
-                    <div className="flex items-center gap-2 px-2 py-1.5 mb-2">
-                      <span className={cn("h-2 w-2 rounded-full", stageColors[stage])} />
-                      <h3 className="text-xs font-semibold">{stage}</h3>
-                      <Badge variant="secondary" className="text-[10px] ml-auto">
-                        {columns[stage]?.length || 0}
-                      </Badge>
+        <ScrollArea className="w-full">
+          <div className="pb-4">
+            <Kanban
+              value={columns}
+              onValueChange={handleKanbanChange}
+              getItemValue={(item) => item.id}
+            >
+              <KanbanBoard className="flex gap-3">
+                {STAGES.map((stage) => (
+                  <KanbanColumn key={stage} value={stage} className="min-w-[240px] max-w-[240px] shrink-0">
+                    <div className="flex flex-col rounded-lg bg-muted/40 border border-border/50 p-2 h-full">
+                      <div className="flex items-center gap-2 px-2 py-1.5 mb-2">
+                        <span className={cn("h-2 w-2 rounded-full", stageColors[stage])} />
+                        <h3 className="text-xs font-semibold">{stage}</h3>
+                        <Badge variant="secondary" className="text-[10px] ml-auto">
+                          {columns[stage]?.length || 0}
+                        </Badge>
+                      </div>
+                      <KanbanColumnContent value={stage} className="flex flex-col gap-2 min-h-[80px]">
+                        {(columns[stage] || []).map((app) => (
+                          <KanbanItem key={app.id} value={app.id}>
+                            <KanbanItemHandle>
+                              <div
+                                className="bg-background rounded-md border p-2.5 shadow-xs cursor-grab hover:border-primary/30 transition-colors active:cursor-grabbing"
+                                onClick={() => openDetail(app)}
+                              >
+                                {/* Priority dot + Title */}
+                                <div className="flex items-start gap-2">
+                                  <span className={cn("mt-1 h-2 w-2 rounded-full shrink-0", priorityColors[app.priority || "medium"])} />
+                                  <p className="text-xs font-medium truncate">{app.job_title}</p>
+                                </div>
+                                {/* Company with logo */}
+                                <div className="flex items-center gap-1.5 mt-1 ml-4">
+                                  <img
+                                    src={`https://www.google.com/s2/favicons?domain=${app.company.toLowerCase().replace(/\s+/g, "")}.com&sz=16`}
+                                    alt=""
+                                    className="h-3 w-3 rounded-sm"
+                                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                                  />
+                                  <p className="text-[10px] text-muted-foreground">{app.company}</p>
+                                </div>
+                                {/* Badges row */}
+                                <div className="flex flex-wrap items-center gap-1 mt-1.5 ml-4">
+                                  {app.applied_at && (
+                                    <span className="text-[9px] text-muted-foreground">{timeAgo(app.applied_at)}</span>
+                                  )}
+                                  {!app.applied_at && app.created_at && (
+                                    <span className="text-[9px] text-muted-foreground">{timeAgo(app.created_at)}</span>
+                                  )}
+                                  {app.resume_id && (
+                                    <Badge variant="secondary" className="text-[8px] px-1 py-0">
+                                      {getResumeName(app.resume_id)?.substring(0, 12) || "Resume"}
+                                    </Badge>
+                                  )}
+                                  {app.contact_id && (
+                                    <Badge variant="secondary" className="text-[8px] px-1 py-0">
+                                      {getContactName(app.contact_id)?.split(" ")[0] || "Contact"}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </KanbanItemHandle>
+                          </KanbanItem>
+                        ))}
+                      </KanbanColumnContent>
                     </div>
-                    <KanbanColumnContent value={stage} className="flex flex-col gap-2 min-h-[80px]">
-                      {(columns[stage] || []).map((app) => (
-                        <KanbanItem key={app.id} value={app.id}>
-                          <KanbanItemHandle>
-                            <div
-                              className="bg-background rounded-md border p-2.5 shadow-xs cursor-grab hover:border-primary/30 transition-colors active:cursor-grabbing"
-                              onClick={() => openDetail(app)}
-                            >
-                              {/* Priority dot + Title */}
-                              <div className="flex items-start gap-2">
-                                <span className={cn("mt-1 h-2 w-2 rounded-full shrink-0", priorityColors[app.priority || "medium"])} />
-                                <p className="text-xs font-medium truncate">{app.job_title}</p>
-                              </div>
-                              {/* Company with logo */}
-                              <div className="flex items-center gap-1.5 mt-1 ml-4">
-                                <img
-                                  src={`https://www.google.com/s2/favicons?domain=${app.company.toLowerCase().replace(/\s+/g, "")}.com&sz=16`}
-                                  alt=""
-                                  className="h-3 w-3 rounded-sm"
-                                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                                />
-                                <p className="text-[10px] text-muted-foreground">{app.company}</p>
-                              </div>
-                              {/* Badges row */}
-                              <div className="flex flex-wrap items-center gap-1 mt-1.5 ml-4">
-                                {app.applied_at && (
-                                  <span className="text-[9px] text-muted-foreground">{timeAgo(app.applied_at)}</span>
-                                )}
-                                {!app.applied_at && app.created_at && (
-                                  <span className="text-[9px] text-muted-foreground">{timeAgo(app.created_at)}</span>
-                                )}
-                                {app.resume_id && (
-                                  <Badge variant="secondary" className="text-[8px] px-1 py-0">
-                                    {getResumeName(app.resume_id)?.substring(0, 12) || "Resume"}
-                                  </Badge>
-                                )}
-                                {app.contact_id && (
-                                  <Badge variant="secondary" className="text-[8px] px-1 py-0">
-                                    {getContactName(app.contact_id)?.split(" ")[0] || "Contact"}
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </KanbanItemHandle>
-                        </KanbanItem>
-                      ))}
-                    </KanbanColumnContent>
-                  </div>
-                </KanbanColumn>
-              ))}
-            </KanbanBoard>
-            <KanbanOverlay>
-              {({ value }) => {
-                const app = applications.find((a) => a.id === String(value));
-                if (!app) return null;
-                return (
-                  <div className="bg-background rounded-md border p-2.5 shadow-lg rotate-2 w-[230px]">
-                    <div className="flex items-start gap-2">
-                      <span className={cn("mt-1 h-2 w-2 rounded-full shrink-0", priorityColors[app.priority || "medium"])} />
-                      <p className="text-xs font-medium truncate">{app.job_title}</p>
+                  </KanbanColumn>
+                ))}
+              </KanbanBoard>
+              <KanbanOverlay>
+                {({ value }) => {
+                  const app = applications.find((a) => a.id === String(value));
+                  if (!app) return null;
+                  return (
+                    <div className="bg-background rounded-md border p-2.5 shadow-lg rotate-2 w-[230px]">
+                      <div className="flex items-start gap-2">
+                        <span className={cn("mt-1 h-2 w-2 rounded-full shrink-0", priorityColors[app.priority || "medium"])} />
+                        <p className="text-xs font-medium truncate">{app.job_title}</p>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground ml-4 mt-0.5">{app.company}</p>
                     </div>
-                    <p className="text-[10px] text-muted-foreground ml-4 mt-0.5">{app.company}</p>
-                  </div>
-                );
-              }}
-            </KanbanOverlay>
-          </Kanban>
-        </div>
+                  );
+                }}
+              </KanbanOverlay>
+            </Kanban>
+          </div>
+          <ScrollBar orientation="horizontal" className="m-1" />
+        </ScrollArea>
       )}
 
       {/* Detail Sheet (Right Drawer) */}
