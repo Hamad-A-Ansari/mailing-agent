@@ -6,6 +6,7 @@ interface JobResult {
   company: string;
   location: string;
   department: string;
+  description: string;
   url: string;
   postedAt: string | null;
   source: "greenhouse" | "lever" | "ashby" | "smartrecruiters";
@@ -85,6 +86,7 @@ async function fetchGreenhouse(company: string, companyDisplay: string): Promise
     return (data.jobs || []).map((job: {
       id: number;
       title: string;
+      content: string;
       location: { name: string };
       departments: Array<{ name: string }>;
       absolute_url: string;
@@ -95,6 +97,7 @@ async function fetchGreenhouse(company: string, companyDisplay: string): Promise
       company: companyDisplay,
       location: job.location?.name || "Not specified",
       department: job.departments?.[0]?.name || "",
+      description: job.content || "",
       url: job.absolute_url,
       postedAt: job.updated_at || null,
       source: "greenhouse" as const,
@@ -118,6 +121,8 @@ async function fetchLever(company: string, companyDisplay: string): Promise<JobR
     return (data || []).map((job: {
       id: string;
       text: string;
+      description: string;
+      descriptionPlain: string;
       categories: { location: string; team: string; department: string };
       hostedUrl: string;
       createdAt: number;
@@ -127,6 +132,7 @@ async function fetchLever(company: string, companyDisplay: string): Promise<JobR
       company: companyDisplay,
       location: job.categories?.location || "Not specified",
       department: job.categories?.team || job.categories?.department || "",
+      description: job.description || job.descriptionPlain || "",
       url: job.hostedUrl,
       postedAt: job.createdAt ? new Date(job.createdAt).toISOString() : null,
       source: "lever" as const,
@@ -152,6 +158,8 @@ async function fetchAshby(company: string, companyDisplay: string): Promise<JobR
       title: string;
       location: string;
       department: string;
+      descriptionHtml: string;
+      descriptionPlain: string;
       publishedAt: string;
       jobUrl: string;
     }) => ({
@@ -160,6 +168,7 @@ async function fetchAshby(company: string, companyDisplay: string): Promise<JobR
       company: companyDisplay,
       location: job.location || "Not specified",
       department: job.department || "",
+      description: job.descriptionHtml || job.descriptionPlain || "",
       url: job.jobUrl || `https://jobs.ashbyhq.com/${company}/${job.id}`,
       postedAt: job.publishedAt || null,
       source: "ashby" as const,
@@ -185,6 +194,7 @@ async function fetchSmartRecruiters(company: string, companyDisplay: string): Pr
       name: string;
       location: { city: string; region: string; country: string };
       department: { label: string };
+      jobAd: { sections: { jobDescription: { text: string } } };
       releasedDate: string;
       ref: string;
     }) => {
@@ -197,6 +207,7 @@ async function fetchSmartRecruiters(company: string, companyDisplay: string): Pr
         company: companyDisplay,
         location: loc,
         department: job.department?.label || "",
+        description: job.jobAd?.sections?.jobDescription?.text || "",
         url: job.ref || `https://jobs.smartrecruiters.com/${company}/${job.id}`,
         postedAt: job.releasedDate || null,
         source: "smartrecruiters" as const,

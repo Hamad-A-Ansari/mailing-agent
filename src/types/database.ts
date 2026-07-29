@@ -90,3 +90,33 @@ export interface ActivityLog {
   metadata: Record<string, unknown> | null;
   created_at: string;
 }
+
+export type ApplicationStage =
+  | "Saved"
+  | "Applied"
+  | "OA"
+  | "Phone Screen"
+  | "Technical Interview"
+  | "Final Round"
+  | "Offer"
+  | "Rejected"
+  | "Accepted";
+
+export interface Application {
+  id: string;
+  user_id: string;
+  job_title: string;
+  company: string;
+  stage: ApplicationStage;
+  job_url: string | null;
+  job_description: string | null;
+  resume_id: string | null;
+  contact_id: string | null;
+  notes: string | null;
+  location: string | null;
+  department: string | null;
+  source: string | null;
+  applied_at: string | null;
+  created_at: string;
+  updated_at: string;
+}

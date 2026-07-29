@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, ExternalLink, MapPin, Building2, Briefcase } from "lucide-react";
+import { Search, ExternalLink, MapPin, Building2, Briefcase, ChevronDown, ChevronUp, BookmarkPlus } from "lucide-react";
+import { toast } from "@/components/ui/toast";
 import {
   Select,
   SelectContent,
@@ -21,6 +22,7 @@ interface Job {
   company: string;
   location: string;
   department: string;
+  description: string;
   url: string;
   postedAt: string | null;
   source: "greenhouse" | "lever" | "ashby" | "smartrecruiters";
@@ -45,6 +47,7 @@ export default function JobsPage() {
   const [total, setTotal] = useState(0);
   const [locationFilter, setLocationFilter] = useState<string | null>(null);
   const [departmentFilter, setDepartmentFilter] = useState<string | null>(null);
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
 
   const handleSearch = async () => {
     if (!company.trim()) return;
@@ -236,6 +239,39 @@ export default function JobsPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
+                        {job.description && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setExpandedJobId(expandedJobId === job.id ? null : job.id)}
+                            title="View description"
+                          >
+                            {expandedJobId === job.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            await fetch("/api/applications", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                job_title: job.title,
+                                company: job.company,
+                                stage: "Saved",
+                                job_url: job.url,
+                                location: job.location,
+                                department: job.department,
+                                source: job.source,
+                              }),
+                            });
+                            toast.add({ title: "Saved to Applications", type: "success" });
+                          }}
+                          title="Track application"
+                        >
+                          <BookmarkPlus className="h-4 w-4" />
+                        </Button>
                         <Badge variant="outline" className="text-[10px] capitalize">
                           {job.source}
                         </Badge>
@@ -246,6 +282,12 @@ export default function JobsPage() {
                         </a>
                       </div>
                     </div>
+                    {expandedJobId === job.id && job.description && (
+                      <div
+                        className="mt-3 pt-3 border-t text-xs text-muted-foreground prose prose-sm prose-invert max-w-none max-h-[400px] overflow-y-auto"
+                        dangerouslySetInnerHTML={{ __html: job.description }}
+                      />
+                    )}
                   </CardContent>
                 </Card>
               ))}
