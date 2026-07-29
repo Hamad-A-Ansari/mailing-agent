@@ -434,7 +434,7 @@ export default function ApplicationsPage() {
                     <div className="space-y-1.5">
                       <label className="text-[11px] text-muted-foreground">Stage</label>
                       <Select value={detailApp.stage} onValueChange={(v) => { handleUpdateDetail("stage", v); setDetailApp({ ...detailApp, stage: v as ApplicationStage }); }}>
-                        <SelectTrigger className="h-9">
+                        <SelectTrigger className="h-9 w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -445,7 +445,7 @@ export default function ApplicationsPage() {
                     <div className="space-y-1.5">
                       <label className="text-[11px] text-muted-foreground">Priority</label>
                       <Select value={detailApp.priority || "medium"} onValueChange={(v) => { handleUpdateDetail("priority", v); setDetailApp({ ...detailApp, priority: v as ApplicationPriority }); }}>
-                        <SelectTrigger className="h-9">
+                        <SelectTrigger className="h-9 w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -459,7 +459,7 @@ export default function ApplicationsPage() {
                   <div className="space-y-1.5">
                     <label className="text-[11px] text-muted-foreground">Interview Date</label>
                     <Popover>
-                      <PopoverTrigger>
+                      <PopoverTrigger className="w-full">
                         <Button variant="outline" className={cn("w-full h-9 text-sm justify-start font-normal", !detailApp.interview_date && "text-muted-foreground")}>
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {detailApp.interview_date ? format(new Date(detailApp.interview_date), "PPP") : "Pick a date"}
@@ -487,7 +487,7 @@ export default function ApplicationsPage() {
                     <div className="space-y-1.5">
                       <label className="text-[11px] text-muted-foreground">Linked Contact</label>
                       <Select value={detailApp.contact_id || "none"} onValueChange={(v) => { const val = v === "none" ? null : v; handleUpdateDetail("contact_id", val); setDetailApp({ ...detailApp, contact_id: val }); }}>
-                        <SelectTrigger className="h-9">
+                        <SelectTrigger className="h-9 w-full">
                           <SelectValue>{getContactName(detailApp.contact_id) || "None"}</SelectValue>
                         </SelectTrigger>
                         <SelectContent>
@@ -499,7 +499,7 @@ export default function ApplicationsPage() {
                     <div className="space-y-1.5">
                       <label className="text-[11px] text-muted-foreground">Resume Used</label>
                       <Select value={detailApp.resume_id || "none"} onValueChange={(v) => { const val = v === "none" ? null : v; handleUpdateDetail("resume_id", val); setDetailApp({ ...detailApp, resume_id: val }); }}>
-                        <SelectTrigger className="h-9">
+                        <SelectTrigger className="h-9 w-full">
                           <SelectValue>{getResumeName(detailApp.resume_id) || "None"}</SelectValue>
                         </SelectTrigger>
                         <SelectContent>
