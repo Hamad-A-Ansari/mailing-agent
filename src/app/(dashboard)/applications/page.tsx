@@ -187,7 +187,6 @@ export default function ApplicationsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this application?")) return;
     await fetch(`/api/applications/${id}`, { method: "DELETE" });
     toast.add({ title: "Application deleted", type: "success" });
     setDetailApp(null);
