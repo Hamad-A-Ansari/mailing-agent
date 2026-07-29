@@ -285,14 +285,19 @@ export default function JobsPage() {
                     {expandedJobId === job.id && job.description && (
                       <div className="mt-3 pt-3 border-t text-xs text-muted-foreground max-h-[250px] overflow-y-auto scrollbar-none whitespace-pre-wrap leading-relaxed">
                         {job.description
-                          .replace(/<[^>]+>/g, "\n")
-                          .replace(/&nbsp;/g, " ")
-                          .replace(/&amp;/g, "&")
                           .replace(/&lt;/g, "<")
                           .replace(/&gt;/g, ">")
+                          .replace(/&quot;/g, '"')
+                          .replace(/&#39;/g, "'")
+                          .replace(/&amp;/g, "&")
+                          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+                          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+                          .replace(/<[^>]+>/g, "\n")
+                          .replace(/&nbsp;/g, " ")
                           .replace(/&#\d+;/g, "")
                           .replace(/\n{3,}/g, "\n\n")
-                          .trim()}
+                          .trim()
+                          .substring(0, 3000)}
                       </div>
                     )}
                   </CardContent>
