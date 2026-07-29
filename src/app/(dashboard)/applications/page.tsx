@@ -90,13 +90,18 @@ export default function ApplicationsPage() {
     return acc;
   }, {} as Record<string, Application[]>);
 
-  const handleKanbanChange = async (newColumns: Record<string, Application[]>) => {
-    // Find which app changed stage
+  const handleKanbanChange = (newColumns: Record<string, Application[]>) => {
+    // Update local state immediately (smooth drag animation)
+    const allApps = Object.entries(newColumns).flatMap(([stage, apps]) =>
+      apps.map((app) => ({ ...app, stage: stage as ApplicationStage }))
+    );
+    setApplications(allApps);
+
+    // Persist stage changes to server in background (no refetch)
     for (const [stage, apps] of Object.entries(newColumns)) {
       for (const app of apps) {
         if (app.stage !== stage) {
-          // Stage changed — update server
-          await fetch(`/api/applications/${app.id}`, {
+          fetch(`/api/applications/${app.id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ stage }),
@@ -104,12 +109,6 @@ export default function ApplicationsPage() {
         }
       }
     }
-
-    // Update local state
-    const allApps = Object.entries(newColumns).flatMap(([stage, apps]) =>
-      apps.map((app) => ({ ...app, stage: stage as ApplicationStage }))
-    );
-    setApplications(allApps);
   };
 
   const handleAdd = async () => {
