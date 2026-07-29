@@ -402,7 +402,7 @@ export default function ApplicationsPage() {
 
       {/* Detail Sheet (Right Drawer) */}
       <Sheet open={!!detailApp} onOpenChange={(open) => { if (!open) setDetailApp(null); }}>
-        <SheetContent className="w-[420px] sm:w-[480px] overflow-y-auto scrollbar-none">
+        <SheetContent className="w-[480px] sm:max-w-[540px] overflow-y-auto scrollbar-none p-6">
           {detailApp && (
             <div className="flex flex-col h-full">
               {/* Header */}
