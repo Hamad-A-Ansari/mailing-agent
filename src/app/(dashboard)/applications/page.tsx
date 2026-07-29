@@ -45,11 +45,21 @@ import {
   TimelineTitle,
 } from "@/components/reui/timeline";
 import { toast } from "@/components/ui/toast";
-import { Plus, Trash2, ExternalLink, ArrowRight, CalendarIcon } from "lucide-react";
+import { Plus, Trash2, ExternalLink, ArrowRight, CalendarIcon, Pencil, MoveRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+  ContextMenuSeparator,
+} from "@/components/ui/context-menu";
 import { format } from "date-fns";
 import type { Application, ApplicationStage, ApplicationPriority, ApplicationHistory } from "@/types/database";
 
@@ -268,45 +278,89 @@ export default function ApplicationsPage() {
                         {(columns[stage] || []).map((app) => (
                           <KanbanItem key={app.id} value={app.id}>
                             <KanbanItemHandle>
-                              <div
-                                className="bg-background rounded-md border p-2.5 shadow-xs cursor-grab hover:border-primary/30 transition-colors active:cursor-grabbing"
-                                onClick={() => openDetail(app)}
-                              >
-                                {/* Priority dot + Title */}
-                                <div className="flex items-start gap-2">
-                                  <span className={cn("mt-1 h-2 w-2 rounded-full shrink-0", priorityColors[app.priority || "medium"])} />
-                                  <p className="text-xs font-medium truncate">{app.job_title}</p>
-                                </div>
-                                {/* Company with logo */}
-                                <div className="flex items-center gap-1.5 mt-1 ml-4">
-                                  <img
-                                    src={`https://www.google.com/s2/favicons?domain=${app.company.toLowerCase().replace(/\s+/g, "")}.com&sz=16`}
-                                    alt=""
-                                    className="h-3 w-3 rounded-sm"
-                                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                                  />
-                                  <p className="text-[10px] text-muted-foreground">{app.company}</p>
-                                </div>
-                                {/* Badges row */}
-                                <div className="flex flex-wrap items-center gap-1 mt-1.5 ml-4">
-                                  {app.applied_at && (
-                                    <span className="text-[9px] text-muted-foreground">{timeAgo(app.applied_at)}</span>
-                                  )}
-                                  {!app.applied_at && app.created_at && (
-                                    <span className="text-[9px] text-muted-foreground">{timeAgo(app.created_at)}</span>
-                                  )}
-                                  {app.resume_id && (
-                                    <Badge variant="secondary" className="text-[8px] px-1 py-0">
-                                      {getResumeName(app.resume_id)?.substring(0, 12) || "Resume"}
-                                    </Badge>
-                                  )}
-                                  {app.contact_id && (
-                                    <Badge variant="secondary" className="text-[8px] px-1 py-0">
-                                      {getContactName(app.contact_id)?.split(" ")[0] || "Contact"}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
+                              <ContextMenu>
+                                <ContextMenuTrigger>
+                                  <div
+                                    className="bg-background rounded-md border p-2.5 shadow-xs cursor-grab hover:border-primary/30 transition-colors active:cursor-grabbing"
+                                    onClick={() => openDetail(app)}
+                                  >
+                                    {/* Priority dot + Title */}
+                                    <div className="flex items-start gap-2">
+                                      <span className={cn("mt-1 h-2 w-2 rounded-full shrink-0", priorityColors[app.priority || "medium"])} />
+                                      <p className="text-xs font-medium truncate">{app.job_title}</p>
+                                    </div>
+                                    {/* Company with logo */}
+                                    <div className="flex items-center gap-1.5 mt-1 ml-4">
+                                      <img
+                                        src={`https://www.google.com/s2/favicons?domain=${app.company.toLowerCase().replace(/\s+/g, "")}.com&sz=16`}
+                                        alt=""
+                                        className="h-3 w-3 rounded-sm"
+                                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                                      />
+                                      <p className="text-[10px] text-muted-foreground">{app.company}</p>
+                                    </div>
+                                    {/* Badges row */}
+                                    <div className="flex flex-wrap items-center gap-1 mt-1.5 ml-4">
+                                      {app.applied_at && (
+                                        <span className="text-[9px] text-muted-foreground">{timeAgo(app.applied_at)}</span>
+                                      )}
+                                      {!app.applied_at && app.created_at && (
+                                        <span className="text-[9px] text-muted-foreground">{timeAgo(app.created_at)}</span>
+                                      )}
+                                      {app.resume_id && (
+                                        <Badge variant="secondary" className="text-[8px] px-1 py-0">
+                                          {getResumeName(app.resume_id)?.substring(0, 12) || "Resume"}
+                                        </Badge>
+                                      )}
+                                      {app.contact_id && (
+                                        <Badge variant="secondary" className="text-[8px] px-1 py-0">
+                                          {getContactName(app.contact_id)?.split(" ")[0] || "Contact"}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                </ContextMenuTrigger>
+                                <ContextMenuContent>
+                                  <ContextMenuItem onClick={() => openDetail(app)}>
+                                    <Pencil className="mr-2 h-3.5 w-3.5" />
+                                    Edit
+                                  </ContextMenuItem>
+                                  <ContextMenuSub>
+                                    <ContextMenuSubTrigger>
+                                      <MoveRight className="mr-2 h-3.5 w-3.5" />
+                                      Move to
+                                    </ContextMenuSubTrigger>
+                                    <ContextMenuSubContent>
+                                      {STAGES.filter((s) => s !== app.stage).map((s) => (
+                                        <ContextMenuItem
+                                          key={s}
+                                          onClick={() => {
+                                            handleKanbanChange({
+                                              ...columns,
+                                              [app.stage]: columns[app.stage].filter((a) => a.id !== app.id),
+                                              [s]: [...(columns[s] || []), { ...app, stage: s }],
+                                            });
+                                            fetch(`/api/applications/${app.id}`, {
+                                              method: "PUT",
+                                              headers: { "Content-Type": "application/json" },
+                                              body: JSON.stringify({ stage: s }),
+                                            });
+                                            toast.add({ title: `Moved to ${s}`, type: "success" });
+                                          }}
+                                        >
+                                          <span className={cn("mr-2 h-2 w-2 rounded-full inline-block", stageColors[s])} />
+                                          {s}
+                                        </ContextMenuItem>
+                                      ))}
+                                    </ContextMenuSubContent>
+                                  </ContextMenuSub>
+                                  <ContextMenuSeparator />
+                                  <ContextMenuItem className="text-destructive" onClick={() => handleDelete(app.id)}>
+                                    <Trash2 className="mr-2 h-3.5 w-3.5" />
+                                    Delete
+                                  </ContextMenuItem>
+                                </ContextMenuContent>
+                              </ContextMenu>
                             </KanbanItemHandle>
                           </KanbanItem>
                         ))}
