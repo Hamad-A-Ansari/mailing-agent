@@ -102,12 +102,15 @@ export type ApplicationStage =
   | "Rejected"
   | "Accepted";
 
+export type ApplicationPriority = "low" | "medium" | "high";
+
 export interface Application {
   id: string;
   user_id: string;
   job_title: string;
   company: string;
   stage: ApplicationStage;
+  priority: ApplicationPriority;
   job_url: string | null;
   job_description: string | null;
   resume_id: string | null;
@@ -116,7 +119,19 @@ export interface Application {
   location: string | null;
   department: string | null;
   source: string | null;
+  interview_date: string | null;
   applied_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface ApplicationHistory {
+  id: string;
+  application_id: string;
+  user_id: string;
+  action: string;
+  from_stage: string | null;
+  to_stage: string | null;
+  note: string | null;
+  created_at: string;
 }

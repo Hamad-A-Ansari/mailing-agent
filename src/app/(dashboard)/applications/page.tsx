@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -11,6 +12,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Select,
   SelectContent,
@@ -27,21 +34,24 @@ import {
   KanbanItemHandle,
   KanbanOverlay,
 } from "@/components/ui/kanban";
+import {
+  Timeline,
+  TimelineContent,
+  TimelineDate,
+  TimelineHeader,
+  TimelineIndicator,
+  TimelineItem,
+  TimelineSeparator,
+  TimelineTitle,
+} from "@/components/reui/timeline";
 import { toast } from "@/components/ui/toast";
-import { Plus, Trash2, ExternalLink } from "lucide-react";
+import { Plus, Trash2, ExternalLink, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Application, ApplicationStage } from "@/types/database";
+import type { Application, ApplicationStage, ApplicationPriority, ApplicationHistory } from "@/types/database";
 
 const STAGES: ApplicationStage[] = [
-  "Saved",
-  "Applied",
-  "OA",
-  "Phone Screen",
-  "Technical Interview",
-  "Final Round",
-  "Offer",
-  "Rejected",
-  "Accepted",
+  "Saved", "Applied", "OA", "Phone Screen",
+  "Technical Interview", "Final Round", "Offer", "Rejected", "Accepted",
 ];
 
 const stageColors: Record<ApplicationStage, string> = {
@@ -56,18 +66,31 @@ const stageColors: Record<ApplicationStage, string> = {
   Accepted: "bg-emerald-500",
 };
 
+const priorityColors: Record<ApplicationPriority, string> = {
+  low: "bg-emerald-500",
+  medium: "bg-amber-500",
+  high: "bg-rose-500",
+};
+
 export default function ApplicationsPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
-  const [editApp, setEditApp] = useState<Application | null>(null);
+  const [detailApp, setDetailApp] = useState<Application | null>(null);
+  const [detailHistory, setDetailHistory] = useState<ApplicationHistory[]>([]);
+  const [contacts, setContacts] = useState<Array<{ id: string; name: string; company: string }>>([]);
+  const [resumes, setResumes] = useState<Array<{ id: string; display_name: string | null; filename: string }>>([]);
   const [formData, setFormData] = useState({
     job_title: "",
     company: "",
     stage: "Saved" as ApplicationStage,
+    priority: "medium" as ApplicationPriority,
     job_url: "",
     notes: "",
     location: "",
+    resume_id: null as string | null,
+    contact_id: null as string | null,
+    interview_date: "",
   });
 
   const fetchApplications = useCallback(async () => {
@@ -82,22 +105,28 @@ export default function ApplicationsPage() {
 
   useEffect(() => {
     fetchApplications();
+    // Fetch contacts and resumes for linking
+    fetch("/api/recruiters?pageSize=1000").then(r => r.json()).then(data => {
+      setContacts((data.recruiters || []).map((r: { id: string; name: string; company: string }) => ({ id: r.id, name: r.name, company: r.company })));
+    });
+    fetch("/api/resumes").then(r => r.json()).then(data => {
+      setResumes((data.resumes || []).map((r: { id: string; display_name: string | null; filename: string }) => ({ id: r.id, display_name: r.display_name, filename: r.filename })));
+    });
   }, [fetchApplications]);
 
-  // Build columns data for the Kanban component
+  // Build columns for Kanban
   const columns = STAGES.reduce((acc, stage) => {
     acc[stage] = applications.filter((app) => app.stage === stage);
     return acc;
   }, {} as Record<string, Application[]>);
 
   const handleKanbanChange = (newColumns: Record<string, Application[]>) => {
-    // Update local state immediately (smooth drag animation)
     const allApps = Object.entries(newColumns).flatMap(([stage, apps]) =>
       apps.map((app) => ({ ...app, stage: stage as ApplicationStage }))
     );
     setApplications(allApps);
 
-    // Persist stage changes to server in background (no refetch)
+    // Persist stage changes
     for (const [stage, apps] of Object.entries(newColumns)) {
       for (const app of apps) {
         if (app.stage !== stage) {
@@ -113,13 +142,16 @@ export default function ApplicationsPage() {
 
   const handleAdd = async () => {
     if (!formData.job_title.trim() || !formData.company.trim()) return;
-
     const res = await fetch("/api/applications", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
+      body: JSON.stringify({
+        ...formData,
+        resume_id: formData.resume_id || null,
+        contact_id: formData.contact_id || null,
+        interview_date: formData.interview_date || null,
+      }),
     });
-
     if (res.ok) {
       toast.add({ title: "Application added", type: "success" });
       setAddOpen(false);
@@ -128,44 +160,58 @@ export default function ApplicationsPage() {
     }
   };
 
-  const handleUpdate = async () => {
-    if (!editApp) return;
-
-    const res = await fetch(`/api/applications/${editApp.id}`, {
+  const handleUpdateDetail = async (field: string, value: string | null) => {
+    if (!detailApp) return;
+    const update = { [field]: value };
+    await fetch(`/api/applications/${detailApp.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
+      body: JSON.stringify(update),
     });
-
-    if (res.ok) {
-      toast.add({ title: "Application updated", type: "success" });
-      setEditApp(null);
-      resetForm();
-      fetchApplications();
-    }
+    setDetailApp({ ...detailApp, [field]: value } as Application);
+    fetchApplications();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this application?")) return;
     await fetch(`/api/applications/${id}`, { method: "DELETE" });
     toast.add({ title: "Application deleted", type: "success" });
+    setDetailApp(null);
     fetchApplications();
   };
 
-  const resetForm = () => {
-    setFormData({ job_title: "", company: "", stage: "Saved", job_url: "", notes: "", location: "" });
+  const openDetail = async (app: Application) => {
+    setDetailApp(app);
+    // Fetch history
+    const res = await fetch(`/api/applications/${app.id}`);
+    if (res.ok) {
+      const data = await res.json();
+      setDetailHistory(data.history || []);
+    }
   };
 
-  const openEdit = (app: Application) => {
+  const resetForm = () => {
     setFormData({
-      job_title: app.job_title,
-      company: app.company,
-      stage: app.stage,
-      job_url: app.job_url || "",
-      notes: app.notes || "",
-      location: app.location || "",
+      job_title: "", company: "", stage: "Saved", priority: "medium",
+      job_url: "", notes: "", location: "", resume_id: null, contact_id: null, interview_date: "",
     });
-    setEditApp(app);
+  };
+
+  const timeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ago`;
+  };
+
+  const getContactName = (id: string | null) => contacts.find(c => c.id === id)?.name || null;
+  const getResumeName = (id: string | null) => {
+    const r = resumes.find(r => r.id === id);
+    return r ? (r.display_name || r.filename) : null;
   };
 
   return (
@@ -218,24 +264,42 @@ export default function ApplicationsPage() {
                           <KanbanItemHandle>
                             <div
                               className="bg-background rounded-md border p-2.5 shadow-xs cursor-grab hover:border-primary/30 transition-colors active:cursor-grabbing"
-                              onClick={() => openEdit(app)}
+                              onClick={() => openDetail(app)}
                             >
-                              <p className="text-xs font-medium truncate">{app.job_title}</p>
-                              <p className="text-[10px] text-muted-foreground mt-0.5">{app.company}</p>
-                              {app.location && (
-                                <p className="text-[10px] text-muted-foreground">{app.location}</p>
-                              )}
-                              {app.job_url && (
-                                <a
-                                  href={app.job_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="text-[10px] text-primary hover:underline flex items-center gap-0.5 mt-1"
-                                >
-                                  View posting <ExternalLink className="h-2.5 w-2.5" />
-                                </a>
-                              )}
+                              {/* Priority dot + Title */}
+                              <div className="flex items-start gap-2">
+                                <span className={cn("mt-1 h-2 w-2 rounded-full shrink-0", priorityColors[app.priority || "medium"])} />
+                                <p className="text-xs font-medium truncate">{app.job_title}</p>
+                              </div>
+                              {/* Company with logo */}
+                              <div className="flex items-center gap-1.5 mt-1 ml-4">
+                                <img
+                                  src={`https://logo.clearbit.com/${app.company.toLowerCase().replace(/\s+/g, "")}.com`}
+                                  alt=""
+                                  className="h-3 w-3 rounded-sm"
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                                />
+                                <p className="text-[10px] text-muted-foreground">{app.company}</p>
+                              </div>
+                              {/* Badges row */}
+                              <div className="flex flex-wrap items-center gap-1 mt-1.5 ml-4">
+                                {app.applied_at && (
+                                  <span className="text-[9px] text-muted-foreground">{timeAgo(app.applied_at)}</span>
+                                )}
+                                {!app.applied_at && app.created_at && (
+                                  <span className="text-[9px] text-muted-foreground">{timeAgo(app.created_at)}</span>
+                                )}
+                                {app.resume_id && (
+                                  <Badge variant="secondary" className="text-[8px] px-1 py-0">
+                                    {getResumeName(app.resume_id)?.substring(0, 12) || "Resume"}
+                                  </Badge>
+                                )}
+                                {app.contact_id && (
+                                  <Badge variant="secondary" className="text-[8px] px-1 py-0">
+                                    {getContactName(app.contact_id)?.split(" ")[0] || "Contact"}
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                           </KanbanItemHandle>
                         </KanbanItem>
@@ -247,13 +311,15 @@ export default function ApplicationsPage() {
             </KanbanBoard>
             <KanbanOverlay>
               {({ value }) => {
-                const activeValue = String(value);
-                const app = applications.find((a) => a.id === activeValue);
+                const app = applications.find((a) => a.id === String(value));
                 if (!app) return null;
                 return (
-                  <div className="bg-background rounded-md border p-2.5 shadow-lg rotate-2">
-                    <p className="text-xs font-medium truncate">{app.job_title}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{app.company}</p>
+                  <div className="bg-background rounded-md border p-2.5 shadow-lg rotate-2 w-[230px]">
+                    <div className="flex items-start gap-2">
+                      <span className={cn("mt-1 h-2 w-2 rounded-full shrink-0", priorityColors[app.priority || "medium"])} />
+                      <p className="text-xs font-medium truncate">{app.job_title}</p>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground ml-4 mt-0.5">{app.company}</p>
                   </div>
                 );
               }}
@@ -262,80 +328,227 @@ export default function ApplicationsPage() {
         </div>
       )}
 
-      {/* Add/Edit Dialog */}
-      <Dialog open={addOpen || !!editApp} onOpenChange={(open) => { if (!open) { setAddOpen(false); setEditApp(null); resetForm(); } }}>
+      {/* Detail Sheet (Right Drawer) */}
+      <Sheet open={!!detailApp} onOpenChange={(open) => { if (!open) setDetailApp(null); }}>
+        <SheetContent className="w-[420px] sm:w-[480px] overflow-y-auto">
+          {detailApp && (
+            <>
+              <SheetHeader className="pb-4">
+                <div className="flex items-center gap-2">
+                  <img
+                    src={`https://logo.clearbit.com/${detailApp.company.toLowerCase().replace(/\s+/g, "")}.com`}
+                    alt=""
+                    className="h-5 w-5 rounded"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  />
+                  <SheetTitle className="text-base">{detailApp.job_title}</SheetTitle>
+                </div>
+                <p className="text-sm text-muted-foreground">{detailApp.company}{detailApp.location ? ` · ${detailApp.location}` : ""}</p>
+              </SheetHeader>
+
+              <div className="space-y-5">
+                {/* Stage + Priority */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">Stage</label>
+                    <Select value={detailApp.stage} onValueChange={(v) => { handleUpdateDetail("stage", v); setDetailApp({ ...detailApp, stage: v as ApplicationStage }); }}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STAGES.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">Priority</label>
+                    <Select value={detailApp.priority || "medium"} onValueChange={(v) => { handleUpdateDetail("priority", v); setDetailApp({ ...detailApp, priority: v as ApplicationPriority }); }}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Linked Contact */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Linked Contact</label>
+                  <Select value={detailApp.contact_id || "none"} onValueChange={(v) => { const val = v === "none" ? null : v; handleUpdateDetail("contact_id", val); setDetailApp({ ...detailApp, contact_id: val }); }}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue>{getContactName(detailApp.contact_id) || "None"}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {contacts.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name} ({c.company})</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Linked Resume */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Resume Used</label>
+                  <Select value={detailApp.resume_id || "none"} onValueChange={(v) => { const val = v === "none" ? null : v; handleUpdateDetail("resume_id", val); setDetailApp({ ...detailApp, resume_id: val }); }}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue>{getResumeName(detailApp.resume_id) || "None"}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {resumes.map((r) => (<SelectItem key={r.id} value={r.id}>{r.display_name || r.filename}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Interview Date */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Interview Date</label>
+                  <Input
+                    type="datetime-local"
+                    className="h-8 text-xs"
+                    value={detailApp.interview_date ? new Date(detailApp.interview_date).toISOString().slice(0, 16) : ""}
+                    onChange={(e) => { const val = e.target.value ? new Date(e.target.value).toISOString() : null; handleUpdateDetail("interview_date", val); setDetailApp({ ...detailApp, interview_date: val }); }}
+                  />
+                </div>
+
+                {/* Job URL */}
+                {detailApp.job_url && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">Job Posting</label>
+                    <a href={detailApp.job_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1">
+                      View posting <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                )}
+
+                {/* Notes */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Notes</label>
+                  <Textarea
+                    className="text-xs min-h-[100px] resize-none"
+                    placeholder="Add notes about this application..."
+                    value={detailApp.notes || ""}
+                    onChange={(e) => setDetailApp({ ...detailApp, notes: e.target.value })}
+                    onBlur={() => handleUpdateDetail("notes", detailApp.notes)}
+                  />
+                </div>
+
+                {/* Timeline */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Activity</label>
+                  {detailHistory.length === 0 ? (
+                    <p className="text-[10px] text-muted-foreground">No activity yet.</p>
+                  ) : (
+                    <Timeline defaultValue={detailHistory.length}>
+                      {detailHistory.map((h, idx) => (
+                        <TimelineItem key={h.id} step={idx + 1} className="group-data-[orientation=vertical]/timeline:ms-8">
+                          <TimelineHeader>
+                            <TimelineSeparator className="bg-input! group-data-[orientation=vertical]/timeline:-left-5 group-data-[orientation=vertical]/timeline:h-[calc(100%-1rem)] group-data-[orientation=vertical]/timeline:translate-y-5" />
+                            <TimelineIndicator className="flex size-4 items-center justify-center border-none group-data-[orientation=vertical]/timeline:-left-5 bg-primary/20">
+                              <ArrowRight className="size-2.5 text-primary" />
+                            </TimelineIndicator>
+                            <TimelineTitle className="text-[11px]">
+                              {h.from_stage} → {h.to_stage}
+                            </TimelineTitle>
+                          </TimelineHeader>
+                          <TimelineContent>
+                            <TimelineDate className="text-[10px]">{timeAgo(h.created_at)}</TimelineDate>
+                          </TimelineContent>
+                        </TimelineItem>
+                      ))}
+                    </Timeline>
+                  )}
+                </div>
+
+                {/* Delete */}
+                <div className="pt-4 border-t">
+                  <Button variant="destructive" size="sm" onClick={() => handleDelete(detailApp.id)}>
+                    <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete Application
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Add Dialog */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{editApp ? "Edit Application" : "Add Application"}</DialogTitle>
+            <DialogTitle>Add Application</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Job Title *</label>
-              <Input
-                value={formData.job_title}
-                onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
-                placeholder="e.g. Software Engineer"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Company *</label>
-              <Input
-                value={formData.company}
-                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                placeholder="e.g. Stripe"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Stage</label>
-              <Select value={formData.stage} onValueChange={(v) => setFormData({ ...formData, stage: v as ApplicationStage })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STAGES.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Location</label>
-              <Input
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                placeholder="e.g. Bangalore, India"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Job URL</label>
-              <Input
-                value={formData.job_url}
-                onChange={(e) => setFormData({ ...formData, job_url: e.target.value })}
-                placeholder="https://..."
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Notes</label>
-              <Input
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Any notes..."
-              />
-            </div>
-            <div className="flex justify-between">
-              {editApp && (
-                <Button variant="destructive" size="sm" onClick={() => { handleDelete(editApp.id); setEditApp(null); }}>
-                  <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete
-                </Button>
-              )}
-              <div className="flex gap-2 ml-auto">
-                <Button variant="outline" onClick={() => { setAddOpen(false); setEditApp(null); resetForm(); }}>
-                  Cancel
-                </Button>
-                <Button onClick={editApp ? handleUpdate : handleAdd} disabled={!formData.job_title.trim() || !formData.company.trim()}>
-                  {editApp ? "Update" : "Add"}
-                </Button>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Job Title *</label>
+                <Input value={formData.job_title} onChange={(e) => setFormData({ ...formData, job_title: e.target.value })} placeholder="Software Engineer" />
               </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Company *</label>
+                <Input value={formData.company} onChange={(e) => setFormData({ ...formData, company: e.target.value })} placeholder="Stripe" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Stage</label>
+                <Select value={formData.stage} onValueChange={(v) => setFormData({ ...formData, stage: v as ApplicationStage })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{STAGES.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Priority</label>
+                <Select value={formData.priority} onValueChange={(v) => setFormData({ ...formData, priority: v as ApplicationPriority })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Location</label>
+              <Input value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} placeholder="Bangalore, India" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Job URL</label>
+              <Input value={formData.job_url} onChange={(e) => setFormData({ ...formData, job_url: e.target.value })} placeholder="https://..." />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Resume</label>
+                <Select value={formData.resume_id || "none"} onValueChange={(v) => setFormData({ ...formData, resume_id: v === "none" ? null : v })}>
+                  <SelectTrigger className="text-xs"><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {resumes.map((r) => (<SelectItem key={r.id} value={r.id}>{r.display_name || r.filename}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Contact</label>
+                <Select value={formData.contact_id || "none"} onValueChange={(v) => setFormData({ ...formData, contact_id: v === "none" ? null : v })}>
+                  <SelectTrigger className="text-xs"><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {contacts.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Notes</label>
+              <Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Any notes..." className="min-h-[60px]" />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+              <Button onClick={handleAdd} disabled={!formData.job_title.trim() || !formData.company.trim()}>Add</Button>
             </div>
           </div>
         </DialogContent>

@@ -6,6 +6,7 @@ const createApplicationSchema = z.object({
   job_title: z.string().min(1),
   company: z.string().min(1),
   stage: z.enum(["Saved", "Applied", "OA", "Phone Screen", "Technical Interview", "Final Round", "Offer", "Rejected", "Accepted"]).default("Saved"),
+  priority: z.enum(["low", "medium", "high"]).default("medium"),
   job_url: z.string().optional().nullable(),
   job_description: z.string().optional().nullable(),
   resume_id: z.string().optional().nullable(),
@@ -14,6 +15,7 @@ const createApplicationSchema = z.object({
   location: z.string().optional().nullable(),
   department: z.string().optional().nullable(),
   source: z.string().optional().nullable(),
+  interview_date: z.string().optional().nullable(),
   applied_at: z.string().optional().nullable(),
 });
 
