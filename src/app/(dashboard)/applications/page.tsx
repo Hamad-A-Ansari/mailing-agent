@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,8 +18,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Kanban,
+  KanbanBoard,
+  KanbanColumn,
+  KanbanColumnContent,
+  KanbanItem,
+  KanbanItemHandle,
+  KanbanOverlay,
+} from "@/components/ui/kanban";
 import { toast } from "@/components/ui/toast";
-import { Plus, Trash2, ExternalLink, GripVertical } from "lucide-react";
+import { Plus, Trash2, ExternalLink } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { Application, ApplicationStage } from "@/types/database";
 
 const STAGES: ApplicationStage[] = [
@@ -36,15 +45,15 @@ const STAGES: ApplicationStage[] = [
 ];
 
 const stageColors: Record<ApplicationStage, string> = {
-  Saved: "bg-gray-500/10 text-gray-400 border-gray-500/20",
-  Applied: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  OA: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-  "Phone Screen": "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
-  "Technical Interview": "bg-orange-500/10 text-orange-400 border-orange-500/20",
-  "Final Round": "bg-pink-500/10 text-pink-400 border-pink-500/20",
-  Offer: "bg-green-500/10 text-green-400 border-green-500/20",
-  Rejected: "bg-red-500/10 text-red-400 border-red-500/20",
-  Accepted: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  Saved: "bg-gray-500",
+  Applied: "bg-blue-500",
+  OA: "bg-purple-500",
+  "Phone Screen": "bg-cyan-500",
+  "Technical Interview": "bg-orange-500",
+  "Final Round": "bg-pink-500",
+  Offer: "bg-green-500",
+  Rejected: "bg-red-500",
+  Accepted: "bg-emerald-500",
 };
 
 export default function ApplicationsPage() {
@@ -74,6 +83,34 @@ export default function ApplicationsPage() {
   useEffect(() => {
     fetchApplications();
   }, [fetchApplications]);
+
+  // Build columns data for the Kanban component
+  const columns = STAGES.reduce((acc, stage) => {
+    acc[stage] = applications.filter((app) => app.stage === stage);
+    return acc;
+  }, {} as Record<string, Application[]>);
+
+  const handleKanbanChange = async (newColumns: Record<string, Application[]>) => {
+    // Find which app changed stage
+    for (const [stage, apps] of Object.entries(newColumns)) {
+      for (const app of apps) {
+        if (app.stage !== stage) {
+          // Stage changed — update server
+          await fetch(`/api/applications/${app.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ stage }),
+          });
+        }
+      }
+    }
+
+    // Update local state
+    const allApps = Object.entries(newColumns).flatMap(([stage, apps]) =>
+      apps.map((app) => ({ ...app, stage: stage as ApplicationStage }))
+    );
+    setApplications(allApps);
+  };
 
   const handleAdd = async () => {
     if (!formData.job_title.trim() || !formData.company.trim()) return;
@@ -109,24 +146,6 @@ export default function ApplicationsPage() {
     }
   };
 
-  const handleStageChange = async (id: string, newStage: ApplicationStage) => {
-    // Optimistic update
-    setApplications((prev) =>
-      prev.map((app) => (app.id === id ? { ...app, stage: newStage } : app))
-    );
-
-    const res = await fetch(`/api/applications/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stage: newStage }),
-    });
-
-    if (!res.ok) {
-      fetchApplications(); // Rollback
-      toast.add({ title: "Failed to update stage", type: "error" });
-    }
-  };
-
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this application?")) return;
     await fetch(`/api/applications/${id}`, { method: "DELETE" });
@@ -150,16 +169,13 @@ export default function ApplicationsPage() {
     setEditApp(app);
   };
 
-  const getStageApps = (stage: ApplicationStage) =>
-    applications.filter((app) => app.stage === stage);
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Applications</h1>
           <p className="text-muted-foreground">
-            Track your job applications across stages.
+            Track your job applications. Drag cards between stages.
           </p>
         </div>
         <Button size="sm" onClick={() => { resetForm(); setAddOpen(true); }}>
@@ -170,71 +186,80 @@ export default function ApplicationsPage() {
 
       {/* Kanban Board */}
       {loading ? (
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div className="flex gap-3 overflow-hidden pb-4">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={`skeleton-col-${i}`} className="min-w-[280px] space-y-3">
+            <div key={`skeleton-col-${i}`} className="min-w-[240px] space-y-3">
               <Skeleton className="h-6 w-24" />
-              <Skeleton className="h-24 w-full rounded-lg" />
-              <Skeleton className="h-24 w-full rounded-lg" />
+              <Skeleton className="h-20 w-full rounded-lg" />
+              <Skeleton className="h-20 w-full rounded-lg" />
             </div>
           ))}
         </div>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {STAGES.map((stage) => {
-            const stageApps = getStageApps(stage);
-            return (
-              <div key={stage} className="min-w-[280px] max-w-[280px] flex-shrink-0">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-medium">{stage}</h3>
-                    <Badge variant="secondary" className="text-[10px]">
-                      {stageApps.length}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="space-y-2 min-h-[100px] rounded-lg bg-muted/30 p-2">
-                  {stageApps.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-8">
-                      No applications
-                    </p>
-                  ) : (
-                    stageApps.map((app) => (
-                      <Card
-                        key={app.id}
-                        className="cursor-pointer hover:border-primary/30 transition-colors"
-                        onClick={() => openEdit(app)}
-                      >
-                        <CardContent className="p-3 space-y-2">
-                          <div className="flex items-start justify-between">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium truncate">{app.job_title}</p>
-                              <p className="text-xs text-muted-foreground">{app.company}</p>
-                            </div>
-                            <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0" />
-                          </div>
-                          {app.location && (
-                            <p className="text-[10px] text-muted-foreground">{app.location}</p>
-                          )}
-                          {app.job_url && (
-                            <a
-                              href={app.job_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
+        <div className="overflow-x-auto scrollbar-none pb-2">
+          <Kanban
+            value={columns}
+            onValueChange={handleKanbanChange}
+            getItemValue={(item) => item.id}
+          >
+            <KanbanBoard className="flex gap-3">
+              {STAGES.map((stage) => (
+                <KanbanColumn key={stage} value={stage} className="min-w-[240px] max-w-[240px] shrink-0">
+                  <div className="flex flex-col rounded-lg bg-muted/40 border border-border/50 p-2 h-full">
+                    <div className="flex items-center gap-2 px-2 py-1.5 mb-2">
+                      <span className={cn("h-2 w-2 rounded-full", stageColors[stage])} />
+                      <h3 className="text-xs font-semibold">{stage}</h3>
+                      <Badge variant="secondary" className="text-[10px] ml-auto">
+                        {columns[stage]?.length || 0}
+                      </Badge>
+                    </div>
+                    <KanbanColumnContent value={stage} className="flex flex-col gap-2 min-h-[80px]">
+                      {(columns[stage] || []).map((app) => (
+                        <KanbanItem key={app.id} value={app.id}>
+                          <KanbanItemHandle>
+                            <div
+                              className="bg-background rounded-md border p-2.5 shadow-xs cursor-grab hover:border-primary/30 transition-colors active:cursor-grabbing"
+                              onClick={() => openEdit(app)}
                             >
-                              View posting <ExternalLink className="h-2.5 w-2.5" />
-                            </a>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))
-                  )}
-                </div>
-              </div>
-            );
-          })}
+                              <p className="text-xs font-medium truncate">{app.job_title}</p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">{app.company}</p>
+                              {app.location && (
+                                <p className="text-[10px] text-muted-foreground">{app.location}</p>
+                              )}
+                              {app.job_url && (
+                                <a
+                                  href={app.job_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-[10px] text-primary hover:underline flex items-center gap-0.5 mt-1"
+                                >
+                                  View posting <ExternalLink className="h-2.5 w-2.5" />
+                                </a>
+                              )}
+                            </div>
+                          </KanbanItemHandle>
+                        </KanbanItem>
+                      ))}
+                    </KanbanColumnContent>
+                  </div>
+                </KanbanColumn>
+              ))}
+            </KanbanBoard>
+            <KanbanOverlay>
+              {({ value }) => {
+                const activeValue = String(value);
+                const app = applications.find((a) => a.id === activeValue);
+                if (!app) return null;
+                return (
+                  <div className="bg-background rounded-md border p-2.5 shadow-lg rotate-2">
+                    <p className="text-xs font-medium truncate">{app.job_title}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{app.company}</p>
+                  </div>
+                );
+              }}
+            </KanbanOverlay>
+          </Kanban>
         </div>
       )}
 
