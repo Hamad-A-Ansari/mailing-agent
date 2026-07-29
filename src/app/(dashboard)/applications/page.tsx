@@ -333,118 +333,120 @@ export default function ApplicationsPage() {
 
       {/* Detail Sheet (Right Drawer) */}
       <Sheet open={!!detailApp} onOpenChange={(open) => { if (!open) setDetailApp(null); }}>
-        <SheetContent className="w-[420px] sm:w-[480px] overflow-y-auto">
+        <SheetContent className="w-[420px] sm:w-[480px] overflow-y-auto scrollbar-none">
           {detailApp && (
-            <>
-              <SheetHeader className="pb-4">
-                <div className="flex items-center gap-2">
+            <div className="flex flex-col h-full">
+              {/* Header */}
+              <SheetHeader className="pb-6 border-b mb-6">
+                <div className="flex items-center gap-3">
                   <img
                     src={`https://www.google.com/s2/favicons?domain=${detailApp.company.toLowerCase().replace(/\s+/g, "")}.com&sz=32`}
                     alt=""
-                    className="h-5 w-5 rounded"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    className="h-8 w-8 rounded-lg bg-muted p-1"
+                    onError={(e) => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%23666' stroke-width='2'%3E%3Crect x='3' y='3' width='18' height='18' rx='4'/%3E%3C/svg%3E"; }}
                   />
-                  <SheetTitle className="text-base">{detailApp.job_title}</SheetTitle>
+                  <div>
+                    <SheetTitle className="text-lg leading-tight">{detailApp.job_title}</SheetTitle>
+                    <p className="text-sm text-muted-foreground mt-0.5">{detailApp.company}{detailApp.location ? ` · ${detailApp.location}` : ""}</p>
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground">{detailApp.company}{detailApp.location ? ` · ${detailApp.location}` : ""}</p>
+                {detailApp.job_url && (
+                  <a href={detailApp.job_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1 mt-2">
+                    View job posting <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
               </SheetHeader>
 
-              <div className="space-y-5">
-                {/* Stage + Priority */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">Stage</label>
-                    <Select value={detailApp.stage} onValueChange={(v) => { handleUpdateDetail("stage", v); setDetailApp({ ...detailApp, stage: v as ApplicationStage }); }}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STAGES.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
-                      </SelectContent>
-                    </Select>
+              <div className="space-y-6 flex-1">
+                {/* Status Section */}
+                <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] text-muted-foreground">Stage</label>
+                      <Select value={detailApp.stage} onValueChange={(v) => { handleUpdateDetail("stage", v); setDetailApp({ ...detailApp, stage: v as ApplicationStage }); }}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STAGES.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] text-muted-foreground">Priority</label>
+                      <Select value={detailApp.priority || "medium"} onValueChange={(v) => { handleUpdateDetail("priority", v); setDetailApp({ ...detailApp, priority: v as ApplicationPriority }); }}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">Priority</label>
-                    <Select value={detailApp.priority || "medium"} onValueChange={(v) => { handleUpdateDetail("priority", v); setDetailApp({ ...detailApp, priority: v as ApplicationPriority }); }}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <label className="text-[11px] text-muted-foreground">Interview Date</label>
+                    <Popover>
+                      <PopoverTrigger>
+                        <Button variant="outline" className={cn("w-full h-9 text-sm justify-start font-normal", !detailApp.interview_date && "text-muted-foreground")}>
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {detailApp.interview_date ? format(new Date(detailApp.interview_date), "PPP") : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={detailApp.interview_date ? new Date(detailApp.interview_date) : undefined}
+                          onSelect={(date) => {
+                            const val = date ? date.toISOString() : null;
+                            handleUpdateDetail("interview_date", val);
+                            setDetailApp({ ...detailApp, interview_date: val });
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 </div>
 
-                {/* Linked Contact */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Linked Contact</label>
-                  <Select value={detailApp.contact_id || "none"} onValueChange={(v) => { const val = v === "none" ? null : v; handleUpdateDetail("contact_id", val); setDetailApp({ ...detailApp, contact_id: val }); }}>
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue>{getContactName(detailApp.contact_id) || "None"}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {contacts.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name} ({c.company})</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Linked Resume */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Resume Used</label>
-                  <Select value={detailApp.resume_id || "none"} onValueChange={(v) => { const val = v === "none" ? null : v; handleUpdateDetail("resume_id", val); setDetailApp({ ...detailApp, resume_id: val }); }}>
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue>{getResumeName(detailApp.resume_id) || "None"}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {resumes.map((r) => (<SelectItem key={r.id} value={r.id}>{r.display_name || r.filename}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Interview Date */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Interview Date</label>
-                  <Popover>
-                    <PopoverTrigger>
-                      <Button variant="outline" className={cn("w-full h-8 text-xs justify-start font-normal", !detailApp.interview_date && "text-muted-foreground")}>
-                        <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                        {detailApp.interview_date ? format(new Date(detailApp.interview_date), "PPP") : "Pick a date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={detailApp.interview_date ? new Date(detailApp.interview_date) : undefined}
-                        onSelect={(date) => {
-                          const val = date ? date.toISOString() : null;
-                          handleUpdateDetail("interview_date", val);
-                          setDetailApp({ ...detailApp, interview_date: val });
-                        }}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {/* Job URL */}
-                {detailApp.job_url && (
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">Job Posting</label>
-                    <a href={detailApp.job_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1">
-                      View posting <ExternalLink className="h-3 w-3" />
-                    </a>
+                {/* Links Section */}
+                <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Connections</h4>
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] text-muted-foreground">Linked Contact</label>
+                      <Select value={detailApp.contact_id || "none"} onValueChange={(v) => { const val = v === "none" ? null : v; handleUpdateDetail("contact_id", val); setDetailApp({ ...detailApp, contact_id: val }); }}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue>{getContactName(detailApp.contact_id) || "None"}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {contacts.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name} ({c.company})</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] text-muted-foreground">Resume Used</label>
+                      <Select value={detailApp.resume_id || "none"} onValueChange={(v) => { const val = v === "none" ? null : v; handleUpdateDetail("resume_id", val); setDetailApp({ ...detailApp, resume_id: val }); }}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue>{getResumeName(detailApp.resume_id) || "None"}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {resumes.map((r) => (<SelectItem key={r.id} value={r.id}>{r.display_name || r.filename}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                )}
+                </div>
 
-                {/* Notes */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Notes</label>
+                {/* Notes Section */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Notes</h4>
                   <Textarea
-                    className="text-xs min-h-[100px] resize-none"
+                    className="text-sm min-h-[120px] resize-none bg-muted/30 border"
                     placeholder="Add notes about this application..."
                     value={detailApp.notes || ""}
                     onChange={(e) => setDetailApp({ ...detailApp, notes: e.target.value })}
@@ -452,11 +454,11 @@ export default function ApplicationsPage() {
                   />
                 </div>
 
-                {/* Timeline */}
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground">Activity</label>
+                {/* Activity Timeline */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Activity</h4>
                   {detailHistory.length === 0 ? (
-                    <p className="text-[10px] text-muted-foreground">No activity yet.</p>
+                    <p className="text-xs text-muted-foreground py-4 text-center">No activity yet. Stage changes will appear here.</p>
                   ) : (
                     <Timeline defaultValue={detailHistory.length}>
                       {detailHistory.map((h, idx) => (
@@ -481,12 +483,12 @@ export default function ApplicationsPage() {
 
                 {/* Delete */}
                 <div className="pt-4 border-t">
-                  <Button variant="destructive" size="sm" onClick={() => handleDelete(detailApp.id)}>
+                  <Button variant="destructive" size="sm" className="w-full" onClick={() => handleDelete(detailApp.id)}>
                     <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete Application
                   </Button>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </SheetContent>
       </Sheet>
