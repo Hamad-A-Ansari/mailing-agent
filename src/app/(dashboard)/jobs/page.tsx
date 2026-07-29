@@ -284,8 +284,14 @@ export default function JobsPage() {
                     </div>
                     {expandedJobId === job.id && job.description && (
                       <div
-                        className="mt-3 pt-3 border-t text-xs text-muted-foreground prose prose-sm prose-invert max-w-none max-h-[400px] overflow-y-auto"
-                        dangerouslySetInnerHTML={{ __html: job.description }}
+                        className="mt-3 pt-3 border-t text-xs text-muted-foreground max-h-[300px] overflow-y-auto scrollbar-none space-y-2 [&_h1]:text-sm [&_h1]:font-bold [&_h1]:mt-3 [&_h1]:mb-1 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-1 [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-1 [&_p]:mb-1.5 [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:mb-2 [&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:mb-2 [&_li]:mb-0.5 [&_a]:text-primary [&_a]:underline [&_strong]:font-semibold [&_b]:font-semibold [&_br]:hidden [&_img]:hidden [&_style]:hidden [&_script]:hidden"
+                        dangerouslySetInnerHTML={{
+                          __html: job.description
+                            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+                            .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+                            .replace(/style="[^"]*"/gi, "")
+                            .replace(/class="[^"]*"/gi, "")
+                        }}
                       />
                     )}
                   </CardContent>
