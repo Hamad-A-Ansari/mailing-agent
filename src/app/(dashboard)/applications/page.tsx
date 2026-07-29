@@ -45,8 +45,11 @@ import {
   TimelineTitle,
 } from "@/components/reui/timeline";
 import { toast } from "@/components/ui/toast";
-import { Plus, Trash2, ExternalLink, ArrowRight } from "lucide-react";
+import { Plus, Trash2, ExternalLink, ArrowRight, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 import type { Application, ApplicationStage, ApplicationPriority, ApplicationHistory } from "@/types/database";
 
 const STAGES: ApplicationStage[] = [
@@ -274,7 +277,7 @@ export default function ApplicationsPage() {
                               {/* Company with logo */}
                               <div className="flex items-center gap-1.5 mt-1 ml-4">
                                 <img
-                                  src={`https://logo.clearbit.com/${app.company.toLowerCase().replace(/\s+/g, "")}.com`}
+                                  src={`https://www.google.com/s2/favicons?domain=${app.company.toLowerCase().replace(/\s+/g, "")}.com&sz=16`}
                                   alt=""
                                   className="h-3 w-3 rounded-sm"
                                   onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
@@ -336,7 +339,7 @@ export default function ApplicationsPage() {
               <SheetHeader className="pb-4">
                 <div className="flex items-center gap-2">
                   <img
-                    src={`https://logo.clearbit.com/${detailApp.company.toLowerCase().replace(/\s+/g, "")}.com`}
+                    src={`https://www.google.com/s2/favicons?domain=${detailApp.company.toLowerCase().replace(/\s+/g, "")}.com&sz=32`}
                     alt=""
                     className="h-5 w-5 rounded"
                     onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
@@ -406,12 +409,25 @@ export default function ApplicationsPage() {
                 {/* Interview Date */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">Interview Date</label>
-                  <Input
-                    type="date"
-                    className="h-8 text-xs"
-                    value={detailApp.interview_date ? new Date(detailApp.interview_date).toISOString().split("T")[0] : ""}
-                    onChange={(e) => { const val = e.target.value ? new Date(e.target.value).toISOString() : null; handleUpdateDetail("interview_date", val); setDetailApp({ ...detailApp, interview_date: val }); }}
-                  />
+                  <Popover>
+                    <PopoverTrigger>
+                      <Button variant="outline" className={cn("w-full h-8 text-xs justify-start font-normal", !detailApp.interview_date && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                        {detailApp.interview_date ? format(new Date(detailApp.interview_date), "PPP") : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={detailApp.interview_date ? new Date(detailApp.interview_date) : undefined}
+                        onSelect={(date) => {
+                          const val = date ? date.toISOString() : null;
+                          handleUpdateDetail("interview_date", val);
+                          setDetailApp({ ...detailApp, interview_date: val });
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 {/* Job URL */}
