@@ -219,8 +219,8 @@ export default function ApplicationsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col h-[calc(100vh-10rem)]">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold">Applications</h1>
           <p className="text-muted-foreground">
@@ -245,16 +245,17 @@ export default function ApplicationsPage() {
           ))}
         </div>
       ) : (
-        <ScrollArea className="w-full">
-          <div className="pb-4">
+        <ScrollArea className="w-full flex-1">
+          <div className="pb-4 h-full">
             <Kanban
               value={columns}
               onValueChange={handleKanbanChange}
               getItemValue={(item) => item.id}
+              className="h-full"
             >
-              <KanbanBoard className="flex gap-3">
+              <KanbanBoard className="flex gap-3 h-full">
                 {STAGES.map((stage) => (
-                  <KanbanColumn key={stage} value={stage} className="min-w-[240px] max-w-[240px] shrink-0">
+                  <KanbanColumn key={stage} value={stage} className="min-w-[240px] max-w-[240px] shrink-0 h-full">
                     <div className="flex flex-col rounded-lg bg-muted/40 border border-border/50 p-2 h-full">
                       <div className="flex items-center gap-2 px-2 py-1.5 mb-2">
                         <span className={cn("h-2 w-2 rounded-full", stageColors[stage])} />
@@ -263,7 +264,7 @@ export default function ApplicationsPage() {
                           {columns[stage]?.length || 0}
                         </Badge>
                       </div>
-                      <KanbanColumnContent value={stage} className="flex flex-col gap-2 min-h-[80px]">
+                      <KanbanColumnContent value={stage} className="flex flex-col gap-2 min-h-[80px] flex-1 overflow-y-auto scrollbar-none">
                         {(columns[stage] || []).map((app) => (
                           <KanbanItem key={app.id} value={app.id}>
                             <KanbanItemHandle>
