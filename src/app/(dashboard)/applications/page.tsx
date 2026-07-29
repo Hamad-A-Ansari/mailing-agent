@@ -167,30 +167,41 @@ export default function ApplicationsPage() {
       }),
     });
     if (res.ok) {
+      const newApp = await res.json();
+      setApplications((prev) => [newApp, ...prev]);
       toast.add({ title: "Application added", type: "success" });
       setAddOpen(false);
       resetForm();
-      fetchApplications();
     }
   };
 
   const handleUpdateDetail = async (field: string, value: string | null) => {
     if (!detailApp) return;
     const update = { [field]: value };
+    setDetailApp({ ...detailApp, [field]: value } as Application);
+    // Update local applications state without refetch
+    setApplications((prev) =>
+      prev.map((app) => (app.id === detailApp.id ? { ...app, [field]: value } as Application : app))
+    );
     await fetch(`/api/applications/${detailApp.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(update),
     });
-    setDetailApp({ ...detailApp, [field]: value } as Application);
-    fetchApplications();
   };
 
   const handleDelete = async (id: string) => {
-    await fetch(`/api/applications/${id}`, { method: "DELETE" });
-    toast.add({ title: "Application deleted", type: "success" });
+    // Optimistic remove — no refetch, no loading flash
+    setApplications((prev) => prev.filter((app) => app.id !== id));
     setDetailApp(null);
-    fetchApplications();
+    toast.add({ title: "Application deleted", type: "success" });
+    
+    const res = await fetch(`/api/applications/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      // Rollback on failure
+      fetchApplications();
+      toast.add({ title: "Failed to delete", type: "error" });
+    }
   };
 
   const openDetail = async (app: Application) => {
