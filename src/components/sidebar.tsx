@@ -12,6 +12,7 @@ import {
   Paperclip,
   Search,
   Columns3,
+  Link2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -63,6 +64,12 @@ const navItems: NavItem[] = [
     label: "Job Search",
     href: "/jobs",
     icon: Search,
+    ownerOnly: true,
+  },
+  {
+    label: "LinkedIn Jobs",
+    href: "/linkedin-jobs",
+    icon: Link2,
     ownerOnly: true,
   },
   {
