@@ -16,7 +16,8 @@ const importSchema = z.object({
 
 /**
  * POST /api/applications/import
- * Import jobs from Chrome extension. Deduplicates by linkedin_job_id.
+ * Import LinkedIn jobs from Chrome extension into linkedin_jobs table.
+ * Deduplicates by linkedin_job_id per user.
  */
 export async function POST(request: Request) {
   const { userId } = await auth();
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
   // Get existing linkedin_job_ids for this user
   const linkedinIds = jobs.map((j) => j.linkedin_job_id);
   const { data: existing } = await supabase
-    .from("applications")
+    .from("linkedin_jobs")
     .select("linkedin_job_id")
     .eq("user_id", userId)
     .in("linkedin_job_id", linkedinIds);
@@ -61,17 +62,14 @@ export async function POST(request: Request) {
   // Insert new jobs
   const rows = newJobs.map((j) => ({
     user_id: userId,
+    linkedin_job_id: j.linkedin_job_id,
     job_title: j.job_title,
     company: j.company,
     location: j.location || null,
     job_url: j.job_url || null,
-    linkedin_job_id: j.linkedin_job_id,
-    stage: "Saved",
-    priority: "medium",
-    source: "linkedin",
   }));
 
-  const { error } = await supabase.from("applications").insert(rows);
+  const { error } = await supabase.from("linkedin_jobs").insert(rows);
 
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });

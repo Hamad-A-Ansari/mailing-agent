@@ -15,10 +15,19 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/toast";
 import { ExternalLink, Search, MapPin, Building2, Trash2 } from "lucide-react";
-import type { Application } from "@/types/database";
+
+interface LinkedInJob {
+  id: string;
+  linkedin_job_id: string;
+  job_title: string;
+  company: string;
+  location: string | null;
+  job_url: string | null;
+  created_at: string;
+}
 
 export default function LinkedInJobsPage() {
-  const [jobs, setJobs] = useState<Application[]>([]);
+  const [jobs, setJobs] = useState<LinkedInJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [locationFilter, setLocationFilter] = useState<string | null>(null);
@@ -26,14 +35,10 @@ export default function LinkedInJobsPage() {
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
-    const res = await fetch("/api/applications");
+    const res = await fetch("/api/linkedin-jobs");
     if (res.ok) {
       const data = await res.json();
-      // Filter to only LinkedIn-sourced jobs
-      const linkedinJobs = (data.applications || []).filter(
-        (app: Application) => app.source === "linkedin"
-      );
-      setJobs(linkedinJobs);
+      setJobs(data.jobs || []);
     }
     setLoading(false);
   }, []);
@@ -57,17 +62,7 @@ export default function LinkedInJobsPage() {
   const handleDelete = async (id: string) => {
     setJobs((prev) => prev.filter((j) => j.id !== id));
     toast.add({ title: "Job removed", type: "success" });
-    await fetch(`/api/applications/${id}`, { method: "DELETE" });
-  };
-
-  const handleMoveToApplied = async (id: string) => {
-    setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, stage: "Applied" as Application["stage"] } : j)));
-    toast.add({ title: "Moved to Applied", type: "success" });
-    await fetch(`/api/applications/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stage: "Applied" }),
-    });
+    await fetch(`/api/linkedin-jobs?id=${id}`, { method: "DELETE" });
   };
 
   const timeAgo = (dateStr: string) => {
@@ -84,7 +79,7 @@ export default function LinkedInJobsPage() {
       <div>
         <h1 className="text-2xl font-bold">LinkedIn Jobs</h1>
         <p className="text-muted-foreground">
-          Jobs imported from LinkedIn via the Chrome extension. Use filters to narrow down.
+          Jobs imported from LinkedIn via the Chrome extension. Click "Apply" to go to the job post.
         </p>
       </div>
 
@@ -171,19 +166,13 @@ export default function LinkedInJobsPage() {
                         </span>
                       )}
                       <span>{timeAgo(job.created_at)}</span>
-                      <Badge variant="secondary" className="text-[10px]">{job.stage}</Badge>
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    {job.stage === "Saved" && (
-                      <Button variant="outline" size="sm" onClick={() => handleMoveToApplied(job.id)}>
-                        Applied
-                      </Button>
-                    )}
                     {job.job_url && (
                       <a href={job.job_url} target="_blank" rel="noopener noreferrer">
-                        <Button variant="ghost" size="sm">
-                          <ExternalLink className="h-3.5 w-3.5" />
+                        <Button variant="outline" size="sm">
+                          Apply <ExternalLink className="ml-1 h-3 w-3" />
                         </Button>
                       </a>
                     )}
