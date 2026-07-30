@@ -119,6 +119,7 @@ export interface Application {
   location: string | null;
   department: string | null;
   source: string | null;
+  linkedin_job_id: string | null;
   interview_date: string | null;
   applied_at: string | null;
   created_at: string;

@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Switch FAANG - LinkedIn Job Saver",
+  "version": "1.0.0",
+  "description": "Save LinkedIn job search results directly to Switch FAANG application tracker",
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": ["https://switch-faang.vercel.app/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.linkedin.com/jobs/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
