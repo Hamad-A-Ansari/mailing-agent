@@ -111,6 +111,11 @@ export interface Application {
   company: string;
   stage: ApplicationStage;
   priority: ApplicationPriority;
+  sub_stage: string | null;
+  salary_range: string | null;
+  tags: string[];
+  meet_link: string | null;
+  interviewer_name: string | null;
   job_url: string | null;
   job_description: string | null;
   resume_id: string | null;
