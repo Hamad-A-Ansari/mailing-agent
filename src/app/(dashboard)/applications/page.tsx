@@ -275,7 +275,7 @@ export default function ApplicationsPage() {
             >
               <KanbanBoard className="flex gap-3 h-full">
                 {STAGES.map((stage) => (
-                  <KanbanColumn key={stage} value={stage} className="min-w-[240px] max-w-[240px] shrink-0 h-full">
+                  <KanbanColumn key={stage} value={stage} className="min-w-[300px] max-w-[300px] shrink-0 h-full">
                     <div className="flex flex-col rounded-lg bg-muted/40 border border-border/50 p-2 h-full">
                       <div className="flex items-center gap-2 px-2 py-1.5 mb-2">
                         <span className={cn("h-2 w-2 rounded-full", stageColors[stage])} />
@@ -285,48 +285,174 @@ export default function ApplicationsPage() {
                         </Badge>
                       </div>
                       <KanbanColumnContent value={stage} className="flex flex-col gap-2 min-h-[80px] flex-1 overflow-y-auto scrollbar-none">
-                        {(columns[stage] || []).map((app) => (
+                        {(columns[stage] || []).map((app) => {
+                          const daysInStage = Math.floor((Date.now() - new Date(app.updated_at).getTime()) / 86400000);
+                          const isStale = daysInStage >= 14;
+                          const interviewDate = app.interview_date ? new Date(app.interview_date) : null;
+                          const isToday = interviewDate && new Date().toDateString() === interviewDate.toDateString();
+                          const isTomorrow = interviewDate && new Date(Date.now() + 86400000).toDateString() === interviewDate.toDateString();
+                          const urgencyClass = isToday ? "border-red-500/60 bg-red-500/5" : isTomorrow ? "border-yellow-500/60 bg-yellow-500/5" : "";
+
+                          return (
                           <KanbanItem key={app.id} value={app.id}>
                             <KanbanItemHandle>
                               <ContextMenu>
                                 <ContextMenuTrigger>
                                   <div
-                                    className="bg-background rounded-md border p-2.5 shadow-xs cursor-grab hover:border-primary/30 transition-colors active:cursor-grabbing"
+                                    className={cn(
+                                      "bg-background rounded-md border p-3 shadow-xs cursor-grab hover:border-primary/30 transition-colors active:cursor-grabbing space-y-2",
+                                      urgencyClass,
+                                      isStale && "border-orange-500/40"
+                                    )}
                                     onClick={() => openDetail(app)}
                                   >
-                                    {/* Priority dot + Title */}
-                                    <div className="flex items-start gap-2">
-                                      <span className={cn("mt-1 h-2 w-2 rounded-full shrink-0", priorityColors[app.priority || "medium"])} />
-                                      <p className="text-xs font-medium truncate">{app.job_title}</p>
+                                    {/* Row 1: Priority + Title + Link */}
+                                    <div className="flex items-start justify-between gap-1">
+                                      <div className="flex items-start gap-2 min-w-0 flex-1">
+                                        <span className={cn("mt-1 h-2.5 w-2.5 rounded-full shrink-0", priorityColors[app.priority || "medium"])} />
+                                        <p className="text-sm font-medium leading-tight">{app.job_title}</p>
+                                      </div>
+                                      {app.job_url && (
+                                        <a href={app.job_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="shrink-0">
+                                          <ExternalLink className="h-3.5 w-3.5 text-muted-foreground hover:text-primary" />
+                                        </a>
+                                      )}
                                     </div>
-                                    {/* Company with logo */}
-                                    <div className="flex items-center gap-1.5 mt-1 ml-4">
+
+                                    {/* Row 2: Company + Location */}
+                                    <div className="flex items-center gap-1.5">
                                       <img
                                         src={`https://www.google.com/s2/favicons?domain=${app.company.toLowerCase().replace(/\s+/g, "")}.com&sz=16`}
                                         alt=""
-                                        className="h-3 w-3 rounded-sm"
+                                        className="h-3.5 w-3.5 rounded-sm"
                                         onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                                       />
-                                      <p className="text-[10px] text-muted-foreground">{app.company}</p>
+                                      <span className="text-xs text-muted-foreground">{app.company}</span>
+                                      {app.location && <span className="text-xs text-muted-foreground">· {app.location}</span>}
                                     </div>
-                                    {/* Badges row */}
-                                    <div className="flex flex-wrap items-center gap-1 mt-1.5 ml-4">
-                                      {app.applied_at && (
-                                        <span className="text-[9px] text-muted-foreground">{timeAgo(app.applied_at)}</span>
-                                      )}
-                                      {!app.applied_at && app.created_at && (
-                                        <span className="text-[9px] text-muted-foreground">{timeAgo(app.created_at)}</span>
-                                      )}
+
+                                    {/* Row 3: Sub-stage (only for Tech Interview & Final Round) */}
+                                    {(stage === "Technical Interview" || stage === "Final Round") && (
+                                      <div onClick={(e) => e.stopPropagation()}>
+                                        <select
+                                          className="text-[10px] bg-muted border border-border/50 rounded px-1.5 py-0.5 text-foreground cursor-pointer"
+                                          value={app.sub_stage || ""}
+                                          onChange={(e) => {
+                                            const val = e.target.value || null;
+                                            handleUpdateDetail("sub_stage", val);
+                                            setApplications((prev) => prev.map((a) => a.id === app.id ? { ...a, sub_stage: val } : a));
+                                            fetch(`/api/applications/${app.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sub_stage: val }) });
+                                          }}
+                                        >
+                                          <option value="">Select round...</option>
+                                          {stage === "Technical Interview" && (
+                                            <>
+                                              <option value="Round 1">Round 1</option>
+                                              <option value="Round 2">Round 2</option>
+                                              <option value="Round 3">Round 3</option>
+                                              <option value="Round 4">Round 4</option>
+                                              <option value="Round 5">Round 5</option>
+                                            </>
+                                          )}
+                                          {stage === "Final Round" && (
+                                            <>
+                                              <option value="HM Round">HM Round</option>
+                                              <option value="HR Round">HR Round</option>
+                                              <option value="Team Fit">Team Fit</option>
+                                              <option value="Final Round">Final Round</option>
+                                            </>
+                                          )}
+                                        </select>
+                                      </div>
+                                    )}
+
+                                    {/* Row 4: Salary (only for Offer/Accepted) */}
+                                    {(stage === "Offer" || stage === "Accepted") && app.salary_range && (
+                                      <p className="text-xs font-medium text-green-400">💰 {app.salary_range}</p>
+                                    )}
+
+                                    {/* Row 5: Interview date */}
+                                    {interviewDate && (
+                                      <div className={cn("text-xs flex items-center gap-1", isToday ? "text-red-400 font-medium" : isTomorrow ? "text-yellow-400" : "text-muted-foreground")}>
+                                        <CalendarIcon className="h-3 w-3" />
+                                        {isToday ? "Today" : isTomorrow ? "Tomorrow" : format(interviewDate, "MMM d")}
+                                        {app.meet_link && (
+                                          <a href={app.meet_link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-primary hover:underline ml-1">Join</a>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {/* Row 6: Tags */}
+                                    {app.tags && app.tags.length > 0 && (
+                                      <div className="flex flex-wrap gap-1">
+                                        {app.tags.map((tag) => (
+                                          <span key={tag} className={cn("text-[9px] px-1.5 py-0.5 rounded-full font-medium",
+                                            tag === "Referral" ? "bg-green-500/20 text-green-400" :
+                                            tag === "Direct Apply" ? "bg-blue-500/20 text-blue-400" :
+                                            tag === "DSA" ? "bg-purple-500/20 text-purple-400" :
+                                            tag === "System Design" ? "bg-orange-500/20 text-orange-400" :
+                                            tag === "LLD" ? "bg-cyan-500/20 text-cyan-400" :
+                                            tag === "HLD" ? "bg-pink-500/20 text-pink-400" :
+                                            tag === "Behavioral" ? "bg-yellow-500/20 text-yellow-400" :
+                                            "bg-muted text-muted-foreground"
+                                          )}>
+                                            {tag}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {/* Row 7: Resume + Contact badges */}
+                                    <div className="flex flex-wrap items-center gap-1.5">
                                       {app.resume_id && (
-                                        <Badge variant="secondary" className="text-[8px] px-1 py-0">
-                                          {getResumeName(app.resume_id)?.substring(0, 12) || "Resume"}
+                                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
+                                          📎 {getResumeName(app.resume_id)?.substring(0, 15) || "Resume"}
                                         </Badge>
                                       )}
                                       {app.contact_id && (
-                                        <Badge variant="secondary" className="text-[8px] px-1 py-0">
-                                          {getContactName(app.contact_id)?.split(" ")[0] || "Contact"}
+                                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
+                                          👤 {getContactName(app.contact_id) || "Contact"}
                                         </Badge>
                                       )}
+                                      {app.source && app.source !== "manual" && (
+                                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 capitalize">
+                                          {app.source}
+                                        </Badge>
+                                      )}
+                                    </div>
+
+                                    {/* Row 8: Notes preview */}
+                                    {app.notes && (
+                                      <p className="text-[10px] text-muted-foreground italic line-clamp-2">
+                                        📝 {app.notes.substring(0, 80)}{app.notes.length > 80 ? "..." : ""}
+                                      </p>
+                                    )}
+
+                                    {/* Row 9: Time info + stale indicator */}
+                                    <div className="flex items-center justify-between text-[9px] text-muted-foreground pt-1 border-t border-border/30">
+                                      <span>{timeAgo(app.created_at)}</span>
+                                      <span className={isStale ? "text-orange-400 font-medium" : ""}>
+                                        {isStale ? `⚠ ${daysInStage}d stale` : `${daysInStage}d in stage`}
+                                      </span>
+                                    </div>
+
+                                    {/* Row 10: Quick note input */}
+                                    <div onClick={(e) => e.stopPropagation()}>
+                                      <input
+                                        type="text"
+                                        placeholder="Quick note..."
+                                        className="w-full text-[10px] bg-muted/50 border border-border/30 rounded px-2 py-1 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50"
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
+                                            const note = (e.target as HTMLInputElement).value.trim();
+                                            const newNotes = app.notes ? `${app.notes}\n${note}` : note;
+                                            setApplications((prev) => prev.map((a) => a.id === app.id ? { ...a, notes: newNotes } : a));
+                                            fetch(`/api/applications/${app.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ notes: newNotes }) });
+                                            (e.target as HTMLInputElement).value = "";
+                                            toast.add({ title: "Note added", type: "success" });
+                                          }
+                                        }}
+                                      />
                                     </div>
                                   </div>
                                 </ContextMenuTrigger>
@@ -373,7 +499,8 @@ export default function ApplicationsPage() {
                               </ContextMenu>
                             </KanbanItemHandle>
                           </KanbanItem>
-                        ))}
+                          );
+                        })}
                       </KanbanColumnContent>
                     </div>
                   </KanbanColumn>
@@ -384,12 +511,14 @@ export default function ApplicationsPage() {
                   const app = applications.find((a) => a.id === String(value));
                   if (!app) return null;
                   return (
-                    <div className="bg-background rounded-md border p-2.5 shadow-lg rotate-2 w-[230px]">
+                    <div className="bg-background rounded-md border p-3 shadow-lg rotate-2 w-[290px]">
                       <div className="flex items-start gap-2">
-                        <span className={cn("mt-1 h-2 w-2 rounded-full shrink-0", priorityColors[app.priority || "medium"])} />
-                        <p className="text-xs font-medium truncate">{app.job_title}</p>
+                        <span className={cn("mt-1 h-2.5 w-2.5 rounded-full shrink-0", priorityColors[app.priority || "medium"])} />
+                        <div>
+                          <p className="text-sm font-medium">{app.job_title}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{app.company}{app.location ? ` · ${app.location}` : ""}</p>
+                        </div>
                       </div>
-                      <p className="text-[10px] text-muted-foreground ml-4 mt-0.5">{app.company}</p>
                     </div>
                   );
                 }}
