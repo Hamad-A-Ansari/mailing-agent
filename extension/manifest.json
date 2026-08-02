@@ -3,8 +3,8 @@
   "name": "Switch FAANG - LinkedIn Job Saver",
   "version": "1.0.0",
   "description": "Save LinkedIn job search results directly to Switch FAANG application tracker",
-  "permissions": ["activeTab", "storage"],
-  "host_permissions": ["https://switch-faang.vercel.app/*"],
+  "permissions": ["activeTab", "storage", "tabs"],
+  "host_permissions": ["https://switch-faang.vercel.app/*", "https://www.linkedin.com/*"],
   "action": {
     "default_popup": "popup.html"
   },

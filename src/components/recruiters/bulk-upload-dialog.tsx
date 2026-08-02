@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Upload, Trash2, AlertTriangle, Pencil } from "lucide-react";
+import { Upload, Trash2, AlertTriangle, Pencil, Plus } from "lucide-react";
 
 interface BulkUploadDialogProps {
   open: boolean;
@@ -37,10 +37,13 @@ interface BulkUploadDialogProps {
 }
 
 type ColumnMapping = {
-  name: string | null;
+  nameType: "full" | "split";  // full name in one column vs first+last
+  name: string | null;         // full name column
+  firstName: string | null;    // first name column (if split)
+  lastName: string | null;     // last name column (if split)
   company: string | null;
   title: string | null;
-  email: string | null;
+  emails: Array<{ column: string; type: "work" | "personal" }>;  // multiple email columns
   notes: string | null;
 };
 
@@ -71,10 +74,13 @@ export function BulkUploadDialog({
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [mapping, setMapping] = useState<ColumnMapping>({
+    nameType: "full",
     name: null,
+    firstName: null,
+    lastName: null,
     company: null,
     title: null,
-    email: null,
+    emails: [],
     notes: null,
   });
   const [entries, setEntries] = useState<PreviewEntry[]>([]);
@@ -136,15 +142,32 @@ export function BulkUploadDialog({
   };
 
   const buildPreviewEntries = () => {
-    if (!mapping.name || !mapping.company || !mapping.email) return;
+    const hasName = mapping.nameType === "full" ? !!mapping.name : (!!mapping.firstName && !!mapping.lastName);
+    if (!hasName || !mapping.company || mapping.emails.length === 0) return;
 
     const processed: PreviewEntry[] = rows
-      .filter((row) => row[mapping.name!]?.trim())
+      .filter((row) => {
+        if (mapping.nameType === "full") return row[mapping.name!]?.trim();
+        return row[mapping.firstName!]?.trim() || row[mapping.lastName!]?.trim();
+      })
       .map((row, i) => {
-        const email = row[mapping.email!]?.trim() || "";
+        // Build name
+        let name = "";
+        if (mapping.nameType === "full") {
+          name = row[mapping.name!]?.trim() || "";
+        } else {
+          const first = row[mapping.firstName!]?.trim() || "";
+          const last = row[mapping.lastName!]?.trim() || "";
+          name = `${first} ${last}`.trim();
+        }
+
+        // Get primary email (first mapped email column that has a value)
+        const primaryEmailCol = mapping.emails.find(e => row[e.column]?.trim());
+        const email = primaryEmailCol ? row[primaryEmailCol.column]?.trim() : "";
+
         return {
           id: i,
-          name: row[mapping.name!].trim(),
+          name,
           company: row[mapping.company!]?.trim() || "",
           email,
           title: mapping.title ? row[mapping.title]?.trim() || "" : "",
@@ -192,13 +215,38 @@ export function BulkUploadDialog({
 
     setImporting(true);
 
-    const recruiters = validEntries.map((e) => ({
-      name: e.name,
-      company: e.company,
-      title: e.title || null,
-      notes: e.notes || null,
-      emails: [{ email: e.email, type: "work", is_primary: true }],
-    }));
+    const recruiters = validEntries.map((e) => {
+      // Build emails array from all mapped email columns
+      const emails: Array<{ email: string; type: string; is_primary: boolean }> = [];
+      const rowIndex = e.id;
+      const row = rows[rowIndex];
+
+      if (row) {
+        mapping.emails.forEach((emailMapping, idx) => {
+          const emailVal = row[emailMapping.column]?.trim();
+          if (emailVal && isValidEmail(emailVal)) {
+            emails.push({
+              email: emailVal,
+              type: emailMapping.type,
+              is_primary: idx === 0 && emails.length === 0,
+            });
+          }
+        });
+      }
+
+      // Fallback: use the primary email from preview if no row match
+      if (emails.length === 0 && e.email) {
+        emails.push({ email: e.email, type: "work", is_primary: true });
+      }
+
+      return {
+        name: e.name,
+        company: e.company,
+        title: e.title || null,
+        notes: e.notes || null,
+        emails,
+      };
+    });
 
     const res = await fetch("/api/recruiters/bulk", {
       method: "POST",
@@ -217,7 +265,7 @@ export function BulkUploadDialog({
     setHeaders([]);
     setRows([]);
     setEntries([]);
-    setMapping({ name: null, company: null, title: null, email: null, notes: null });
+    setMapping({ nameType: "full", name: null, firstName: null, lastName: null, company: null, title: null, emails: [], notes: null });
     setResults(null);
   };
 
@@ -254,39 +302,140 @@ export function BulkUploadDialog({
         {step === "map" && (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Map your file columns to recruiter fields ({rows.length} rows detected)
+              Map your file columns to contact fields ({rows.length} rows detected)
             </p>
-            {(["name", "company", "email", "title", "notes"] as const).map((field) => (
-              <div key={field} className="flex items-center gap-4">
-                <span className="w-24 text-sm font-medium capitalize">
-                  {field} {field !== "title" && field !== "notes" && "*"}
-                </span>
-                <Select
-                  value={mapping[field] ?? undefined}
-                  onValueChange={(v) =>
-                    setMapping((prev) => ({ ...prev, [field]: v as string }))
-                  }
+
+            {/* Name type toggle */}
+            <div className="flex items-center gap-4">
+              <span className="w-24 text-sm font-medium">Name *</span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className={`text-xs px-2 py-1 rounded ${mapping.nameType === "full" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+                  onClick={() => setMapping((prev) => ({ ...prev, nameType: "full" }))}
                 >
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Select column" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {headers.map((h) => (
-                      <SelectItem key={h} value={h}>
-                        {h}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                  Full Name
+                </button>
+                <button
+                  type="button"
+                  className={`text-xs px-2 py-1 rounded ${mapping.nameType === "split" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+                  onClick={() => setMapping((prev) => ({ ...prev, nameType: "split" }))}
+                >
+                  First + Last
+                </button>
+              </div>
+            </div>
+
+            {/* Name mapping */}
+            {mapping.nameType === "full" ? (
+              <div className="flex items-center gap-4">
+                <span className="w-24 text-sm font-medium">Full Name *</span>
+                <Select value={mapping.name ?? undefined} onValueChange={(v) => setMapping((prev) => ({ ...prev, name: v as string }))}>
+                  <SelectTrigger className="w-[200px]"><SelectValue placeholder="Select column" /></SelectTrigger>
+                  <SelectContent>{headers.map((h) => (<SelectItem key={h} value={h}>{h}</SelectItem>))}</SelectContent>
                 </Select>
               </div>
-            ))}
+            ) : (
+              <>
+                <div className="flex items-center gap-4">
+                  <span className="w-24 text-sm font-medium">First Name *</span>
+                  <Select value={mapping.firstName ?? undefined} onValueChange={(v) => setMapping((prev) => ({ ...prev, firstName: v as string }))}>
+                    <SelectTrigger className="w-[200px]"><SelectValue placeholder="Select column" /></SelectTrigger>
+                    <SelectContent>{headers.map((h) => (<SelectItem key={h} value={h}>{h}</SelectItem>))}</SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="w-24 text-sm font-medium">Last Name *</span>
+                  <Select value={mapping.lastName ?? undefined} onValueChange={(v) => setMapping((prev) => ({ ...prev, lastName: v as string }))}>
+                    <SelectTrigger className="w-[200px]"><SelectValue placeholder="Select column" /></SelectTrigger>
+                    <SelectContent>{headers.map((h) => (<SelectItem key={h} value={h}>{h}</SelectItem>))}</SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+
+            {/* Company */}
+            <div className="flex items-center gap-4">
+              <span className="w-24 text-sm font-medium">Company *</span>
+              <Select value={mapping.company ?? undefined} onValueChange={(v) => setMapping((prev) => ({ ...prev, company: v as string }))}>
+                <SelectTrigger className="w-[200px]"><SelectValue placeholder="Select column" /></SelectTrigger>
+                <SelectContent>{headers.map((h) => (<SelectItem key={h} value={h}>{h}</SelectItem>))}</SelectContent>
+              </Select>
+            </div>
+
+            {/* Email columns */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Emails *</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMapping((prev) => ({ ...prev, emails: [...prev.emails, { column: "", type: "work" }] }))}
+                >
+                  <Plus className="mr-1 h-3 w-3" /> Add Email Column
+                </Button>
+              </div>
+              {mapping.emails.map((emailMap, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <Select value={emailMap.column || undefined} onValueChange={(v) => {
+                    const updated = [...mapping.emails];
+                    updated[idx] = { ...updated[idx], column: v as string };
+                    setMapping((prev) => ({ ...prev, emails: updated }));
+                  }}>
+                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select column" /></SelectTrigger>
+                    <SelectContent>{headers.map((h) => (<SelectItem key={h} value={h}>{h}</SelectItem>))}</SelectContent>
+                  </Select>
+                  <Select value={emailMap.type} onValueChange={(v) => {
+                    const updated = [...mapping.emails];
+                    updated[idx] = { ...updated[idx], type: v as "work" | "personal" };
+                    setMapping((prev) => ({ ...prev, emails: updated }));
+                  }}>
+                    <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="work">Work</SelectItem>
+                      <SelectItem value="personal">Personal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    setMapping((prev) => ({ ...prev, emails: prev.emails.filter((_, i) => i !== idx) }));
+                  }}>
+                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+              {mapping.emails.length === 0 && (
+                <p className="text-xs text-muted-foreground">Click "Add Email Column" to map email columns from your file.</p>
+              )}
+            </div>
+
+            {/* Title */}
+            <div className="flex items-center gap-4">
+              <span className="w-24 text-sm font-medium">Title</span>
+              <Select value={mapping.title ?? undefined} onValueChange={(v) => setMapping((prev) => ({ ...prev, title: v as string }))}>
+                <SelectTrigger className="w-[200px]"><SelectValue placeholder="Select column" /></SelectTrigger>
+                <SelectContent>{headers.map((h) => (<SelectItem key={h} value={h}>{h}</SelectItem>))}</SelectContent>
+              </Select>
+            </div>
+
+            {/* Notes */}
+            <div className="flex items-center gap-4">
+              <span className="w-24 text-sm font-medium">Notes</span>
+              <Select value={mapping.notes ?? undefined} onValueChange={(v) => setMapping((prev) => ({ ...prev, notes: v as string }))}>
+                <SelectTrigger className="w-[200px]"><SelectValue placeholder="Select column" /></SelectTrigger>
+                <SelectContent>{headers.map((h) => (<SelectItem key={h} value={h}>{h}</SelectItem>))}</SelectContent>
+              </Select>
+            </div>
+
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={reset}>
-                Back
-              </Button>
+              <Button variant="outline" onClick={reset}>Back</Button>
               <Button
                 onClick={buildPreviewEntries}
-                disabled={!mapping.name || !mapping.company || !mapping.email}
+                disabled={
+                  (mapping.nameType === "full" ? !mapping.name : (!mapping.firstName || !mapping.lastName)) ||
+                  !mapping.company ||
+                  mapping.emails.length === 0 ||
+                  !mapping.emails.some(e => e.column)
+                }
               >
                 Preview
               </Button>
