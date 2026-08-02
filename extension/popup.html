@@ -5,13 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Switch FAANG</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      width: 320px;
+      width: 340px;
       min-height: 200px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: #1a1a1a;
@@ -26,51 +22,12 @@
       padding-bottom: 12px;
       border-bottom: 1px solid #333;
     }
-    .header h1 {
-      font-size: 16px;
-      font-weight: 700;
-    }
-    .header span {
-      font-size: 11px;
-      color: #888;
-    }
-    .status {
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 12px;
-      font-size: 13px;
-    }
-    .status.info {
-      background: #1e3a5f;
-      border: 1px solid #2563eb33;
-    }
-    .status.success {
-      background: #1a3a2a;
-      border: 1px solid #22c55e33;
-      color: #4ade80;
-    }
-    .status.error {
-      background: #3a1a1a;
-      border: 1px solid #ef444433;
-      color: #f87171;
-    }
-    .status.warning {
-      background: #3a2a1a;
-      border: 1px solid #f59e0b33;
-      color: #fbbf24;
-    }
-    .job-count {
-      font-size: 24px;
-      font-weight: 700;
-      text-align: center;
-      margin: 16px 0 8px;
-    }
-    .job-label {
-      font-size: 12px;
-      color: #888;
-      text-align: center;
-      margin-bottom: 16px;
-    }
+    .header h1 { font-size: 16px; font-weight: 700; }
+    .header span { font-size: 11px; color: #888; }
+    .status { padding: 12px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
+    .status.warning { background: #3a2a1a; border: 1px solid #f59e0b33; color: #fbbf24; }
+    .job-count, .profile-title { font-size: 24px; font-weight: 700; text-align: center; margin: 12px 0 4px; }
+    .job-label { font-size: 12px; color: #888; text-align: center; margin-bottom: 12px; }
     button {
       width: 100%;
       padding: 10px 16px;
@@ -81,39 +38,13 @@
       cursor: pointer;
       transition: all 0.15s;
     }
-    button.primary {
-      background: #fff;
-      color: #000;
-    }
-    button.primary:hover {
-      background: #e5e5e5;
-    }
-    button.primary:disabled {
-      background: #444;
-      color: #888;
-      cursor: not-allowed;
-    }
-    button.secondary {
-      background: transparent;
-      color: #888;
-      border: 1px solid #333;
-      margin-top: 8px;
-    }
-    button.secondary:hover {
-      border-color: #555;
-      color: #e5e5e5;
-    }
-    .settings {
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid #333;
-    }
-    .settings label {
-      font-size: 11px;
-      color: #888;
-      display: block;
-      margin-bottom: 4px;
-    }
+    button.primary { background: #fff; color: #000; }
+    button.primary:hover { background: #e5e5e5; }
+    button.primary:disabled { background: #444; color: #888; cursor: not-allowed; }
+    button.secondary { background: transparent; color: #888; border: 1px solid #333; margin-top: 8px; }
+    button.secondary:hover { border-color: #555; color: #e5e5e5; }
+    .settings { margin-top: 12px; padding-top: 12px; border-top: 1px solid #333; }
+    .settings label { font-size: 11px; color: #888; display: block; margin-bottom: 4px; }
     .settings input {
       width: 100%;
       padding: 8px;
@@ -123,40 +54,66 @@
       color: #e5e5e5;
       font-size: 12px;
     }
-    .settings input:focus {
-      outline: none;
-      border-color: #555;
+    .settings input:focus { outline: none; border-color: #555; }
+    .result { margin-top: 12px; font-size: 12px; text-align: center; }
+    .profile-card {
+      background: #222;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
     }
-    .result {
-      margin-top: 12px;
-      font-size: 12px;
+    .profile-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .profile-detail { font-size: 12px; color: #888; margin-bottom: 2px; }
+    .email-section { margin-bottom: 12px; }
+    .section-label { font-size: 11px; color: #888; margin-bottom: 4px; font-weight: 600; }
+    .email-found { font-size: 12px; color: #4ade80; margin-bottom: 2px; }
+    .email-guess { font-size: 12px; color: #fbbf24; margin-bottom: 2px; }
+    .mode-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #666;
       text-align: center;
+      margin-bottom: 8px;
     }
   </style>
 </head>
 <body>
   <div class="header">
     <h1>Switch FAANG</h1>
-    <span>LinkedIn Job Saver</span>
+    <span>LinkedIn Helper</span>
   </div>
 
+  <!-- Not on LinkedIn -->
   <div id="not-linkedin" class="status warning" style="display:none;">
-    Navigate to LinkedIn Jobs search to use this extension.
+    Navigate to LinkedIn Jobs or a LinkedIn Profile to use this extension.
   </div>
 
-  <div id="main" style="display:none;">
+  <!-- Jobs Mode -->
+  <div id="jobs-mode" style="display:none;">
+    <div class="mode-label">Jobs Mode</div>
     <div class="job-count" id="job-count">—</div>
     <div class="job-label">jobs found on this page</div>
-
-    <button class="primary" id="save-btn" disabled>Save to Switch FAANG</button>
-
-    <div id="result" class="result" style="display:none;"></div>
+    <button class="primary" id="save-jobs-btn" disabled>Save to Switch FAANG</button>
+    <div id="jobs-result" class="result" style="display:none;"></div>
   </div>
 
-  <div class="settings" id="settings">
+  <!-- Profile Mode -->
+  <div id="profile-mode" style="display:none;">
+    <div class="mode-label">Contact Mode</div>
+    <div id="profile-info">
+      <p style="color:#888; text-align:center; padding:12px 0;">Loading profile...</p>
+    </div>
+    <button class="primary" id="save-contact-btn" disabled>Save Contact to Switch FAANG</button>
+    <div id="profile-result" class="result" style="display:none;"></div>
+  </div>
+
+  <!-- Settings -->
+  <div class="settings">
     <label>API URL (your Switch FAANG instance)</label>
     <input type="text" id="api-url" placeholder="https://switch-faang.vercel.app" />
-    <button class="secondary" id="save-settings" style="margin-top: 8px;">Save Settings</button>
+    <button class="secondary" id="save-settings">Save Settings</button>
   </div>
 
   <script src="popup.js"></script>
