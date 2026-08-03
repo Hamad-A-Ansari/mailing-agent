@@ -1,12 +1,11 @@
-import { auth } from "@clerk/nextjs/server";
-import { getUserRole } from "@/lib/auth";
+import { getAuthUserId, getUserRole } from "@/lib/auth";
 
 /**
  * GET /api/me
  * Returns the current user's role.
  */
 export async function GET() {
-  const { userId } = await auth();
+  const userId = await getAuthUserId();
   if (!userId) {
     return Response.json({ error: "Not authenticated" }, { status: 401 });
   }

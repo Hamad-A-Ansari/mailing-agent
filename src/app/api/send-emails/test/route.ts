@@ -1,5 +1,5 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
-import { isOwner } from "@/lib/auth";
+import { getAuthUserId, isOwner } from "@/lib/auth";
+import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { injectVariables, sampleData } from "@/lib/email/template-engine";
 import { getDefaultResume } from "@/lib/email/sender";
@@ -15,13 +15,13 @@ const testEmailSchema = z.object({
  * Send a test email to the authenticated user's own email. Owner only.
  */
 export async function POST(request: Request) {
-  const { userId } = await auth();
+  const userId = await getAuthUserId();
   if (!userId || !isOwner(userId)) {
     return Response.json({ error: "Not authorized" }, { status: 403 });
   }
 
-  const user = await currentUser();
-  const recipientEmail = user?.emailAddresses?.[0]?.emailAddress;
+  const user = await createAuthServerClient().then(s => s.auth.getUser());
+  const recipientEmail = user.data.user?.email;
 
   if (!recipientEmail) {
     return Response.json({ error: "No email found for current user" }, { status: 400 });

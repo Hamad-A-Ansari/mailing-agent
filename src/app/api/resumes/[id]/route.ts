@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAuthUserId } from "@/lib/auth";
 import { isOwner } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { logActivity } from "@/lib/activity-logger";
@@ -12,7 +12,7 @@ interface RouteParams {
  * Set a resume as the default. Owner only.
  */
 export async function PUT(_request: Request, { params }: RouteParams) {
-  const { userId } = await auth();
+  const userId = await getAuthUserId();
   if (!userId) {
     return Response.json({ error: "Not authorized" }, { status: 401 });
   }
@@ -51,7 +51,7 @@ export async function PUT(_request: Request, { params }: RouteParams) {
  * Delete a resume from DB and Storage. Owner only.
  */
 export async function DELETE(_request: Request, { params }: RouteParams) {
-  const { userId } = await auth();
+  const userId = await getAuthUserId();
   if (!userId) {
     return Response.json({ error: "Not authorized" }, { status: 401 });
   }

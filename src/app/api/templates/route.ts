@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAuthUserId } from "@/lib/auth";
 import { isOwner } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { logActivity } from "@/lib/activity-logger";
@@ -9,7 +9,7 @@ import { createTemplateSchema } from "@/lib/validations";
  * List templates with optional category filter. Owner only.
  */
 export async function GET(request: Request) {
-  const { userId } = await auth();
+  const userId = await getAuthUserId();
   if (!userId) {
     return Response.json({ error: "Not authorized" }, { status: 401 });
   }
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
  * Create a new template. Owner only.
  */
 export async function POST(request: Request) {
-  const { userId } = await auth();
+  const userId = await getAuthUserId();
   if (!userId) {
     return Response.json({ error: "Not authorized" }, { status: 401 });
   }

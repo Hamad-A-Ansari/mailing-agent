@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAuthUserId } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
@@ -29,7 +29,7 @@ const createApplicationSchema = z.object({
  * List all applications for the current user.
  */
 export async function GET() {
-  const { userId } = await auth();
+  const userId = await getAuthUserId();
   if (!userId) {
     return Response.json({ error: "Not authorized" }, { status: 401 });
   }
@@ -54,7 +54,7 @@ export async function GET() {
  * Create a new application.
  */
 export async function POST(request: Request) {
-  const { userId } = await auth();
+  const userId = await getAuthUserId();
   if (!userId) {
     return Response.json({ error: "Not authorized" }, { status: 401 });
   }

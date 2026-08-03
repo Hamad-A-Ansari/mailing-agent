@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAuthUserId } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
@@ -33,7 +33,7 @@ interface RouteParams {
  * Get single application with history.
  */
 export async function GET(_request: Request, { params }: RouteParams) {
-  const { userId } = await auth();
+  const userId = await getAuthUserId();
   if (!userId) {
     return Response.json({ error: "Not authorized" }, { status: 401 });
   }
@@ -67,7 +67,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
  * Update an application. Logs stage changes to history.
  */
 export async function PUT(request: Request, { params }: RouteParams) {
-  const { userId } = await auth();
+  const userId = await getAuthUserId();
   if (!userId) {
     return Response.json({ error: "Not authorized" }, { status: 401 });
   }
@@ -122,7 +122,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
  * Delete an application.
  */
 export async function DELETE(_request: Request, { params }: RouteParams) {
-  const { userId } = await auth();
+  const userId = await getAuthUserId();
   if (!userId) {
     return Response.json({ error: "Not authorized" }, { status: 401 });
   }

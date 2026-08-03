@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 /**
  * Logs a user action to the activity_logs table.
  *
- * @param userId - The Clerk user ID performing the action
+ * @param userId - The user ID performing the action
  * @param action - A short description of the action (e.g. "created_recruiter")
  * @param metadata - Optional additional data about the action
  */

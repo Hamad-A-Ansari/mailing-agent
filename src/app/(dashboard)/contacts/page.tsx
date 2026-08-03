@@ -1,10 +1,9 @@
-import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { isOwner } from "@/lib/auth";
+import { getAuthUserId, isOwner } from "@/lib/auth";
 import { RecruiterTable } from "@/components/recruiters/recruiter-table";
 
-export default async function RecruitersPage() {
-  const { userId } = await auth();
+export default async function ContactsPage() {
+  const userId = await getAuthUserId();
 
   if (!userId) {
     redirect("/sign-in");

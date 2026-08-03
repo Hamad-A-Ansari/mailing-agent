@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAuthUserId } from "@/lib/auth";
 
 interface JobResult {
   id: string;
@@ -17,7 +17,7 @@ interface JobResult {
  * Search jobs from Greenhouse, Lever, Ashby, and SmartRecruiters public APIs.
  */
 export async function GET(request: Request) {
-  const { userId } = await auth();
+  const userId = await getAuthUserId();
   if (!userId) {
     return Response.json({ error: "Not authorized" }, { status: 401 });
   }

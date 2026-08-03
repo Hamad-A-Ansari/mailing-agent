@@ -1,7 +1,9 @@
+import { getCurrentUserId } from "@/lib/supabase/auth-server";
+
 /**
  * Authentication and role utilities.
  *
- * Owner is identified by matching Clerk user ID against
+ * Owner is identified by matching Supabase user ID against
  * the OWNER_USER_ID environment variable.
  */
 
@@ -31,14 +33,8 @@ export function getUserRole(userId: string | null | undefined): UserRole {
 }
 
 /**
- * Throws a Response with 403 status if the userId is not the owner.
- * Use in API route handlers to guard mutation endpoints.
+ * Get the current authenticated user ID from Supabase session.
  */
-export function requireOwner(userId: string | null | undefined): void {
-  if (!isOwner(userId)) {
-    throw new Response(JSON.stringify({ error: "Not authorized" }), {
-      status: 403,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+export async function getAuthUserId(): Promise<string | null> {
+  return getCurrentUserId();
 }

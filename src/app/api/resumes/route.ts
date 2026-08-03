@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAuthUserId } from "@/lib/auth";
 import { isOwner } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { logActivity } from "@/lib/activity-logger";
@@ -10,7 +10,7 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
  * List all uploaded resumes. Owner only.
  */
 export async function GET() {
-  const { userId } = await auth();
+  const userId = await getAuthUserId();
   if (!userId) {
     return Response.json({ error: "Not authorized" }, { status: 401 });
   }
@@ -35,7 +35,7 @@ export async function GET() {
  * Upload a resume (multipart/form-data, PDF only, max 5MB). Owner only.
  */
 export async function POST(request: Request) {
-  const { userId } = await auth();
+  const userId = await getAuthUserId();
   if (!userId) {
     return Response.json({ error: "Not authorized" }, { status: 401 });
   }

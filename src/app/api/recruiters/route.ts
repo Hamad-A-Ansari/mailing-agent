@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAuthUserId } from "@/lib/auth";
 import { isOwner } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { logActivity } from "@/lib/activity-logger";
@@ -9,7 +9,7 @@ import { createRecruiterSchema } from "@/lib/validations";
  * List recruiters with optional filters. Accessible to ALL authenticated users.
  */
 export async function GET(request: Request) {
-  const { userId } = await auth();
+  const userId = await getAuthUserId();
   if (!userId) {
     return Response.json({ error: "Not authorized" }, { status: 401 });
   }
@@ -91,7 +91,7 @@ export async function GET(request: Request) {
  * Create a new recruiter. All authenticated users (demo mode).
  */
 export async function POST(request: Request) {
-  const { userId } = await auth();
+  const userId = await getAuthUserId();
   if (!userId) {
     return Response.json({ error: "Not authorized" }, { status: 401 });
   }

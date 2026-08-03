@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAuthUserId } from "@/lib/auth";
 import { isOwner } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { logActivity } from "@/lib/activity-logger";
@@ -13,7 +13,7 @@ interface RouteParams {
  * Update a template. Owner only.
  */
 export async function PUT(request: Request, { params }: RouteParams) {
-  const { userId } = await auth();
+  const userId = await getAuthUserId();
   if (!userId) {
     return Response.json({ error: "Not authorized" }, { status: 401 });
   }
@@ -55,7 +55,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
  * Delete a template. Owner only.
  */
 export async function DELETE(_request: Request, { params }: RouteParams) {
-  const { userId } = await auth();
+  const userId = await getAuthUserId();
   if (!userId) {
     return Response.json({ error: "Not authorized" }, { status: 401 });
   }

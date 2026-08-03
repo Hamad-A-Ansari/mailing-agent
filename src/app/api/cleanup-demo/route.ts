@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAuthUserId } from "@/lib/auth";
 import { isOwner } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -7,7 +7,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
  * Deletes all data created by non-owner (demo) users. Owner only.
  */
 export async function POST() {
-  const { userId } = await auth();
+  const userId = await getAuthUserId();
   if (!userId || !isOwner(userId)) {
     return Response.json({ error: "Not authorized" }, { status: 403 });
   }

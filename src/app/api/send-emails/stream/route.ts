@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getAuthUserId } from "@/lib/auth";
 import { isOwner } from "@/lib/auth";
 import { logActivity } from "@/lib/activity-logger";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -21,7 +21,7 @@ const sendEmailsSchema = z.object({
  * Stream email sending progress via SSE. Owner only.
  */
 export async function POST(request: Request) {
-  const { userId } = await auth();
+  const userId = await getAuthUserId();
   if (!userId || !isOwner(userId)) {
     return Response.json({ error: "Not authorized" }, { status: 403 });
   }
