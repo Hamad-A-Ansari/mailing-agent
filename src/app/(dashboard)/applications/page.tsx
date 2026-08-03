@@ -175,7 +175,7 @@ export default function ApplicationsPage() {
     }
   };
 
-  const handleUpdateDetail = async (field: string, value: string | null) => {
+  const handleUpdateDetail = async (field: string, value: string | string[] | null) => {
     if (!detailApp) return;
     const update = { [field]: value };
     setDetailApp({ ...detailApp, [field]: value } as Application);
@@ -637,6 +637,100 @@ export default function ApplicationsPage() {
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+                </div>
+
+                {/* Interview Details Section */}
+                <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Interview Details</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] text-muted-foreground">Interviewer</label>
+                      <Input
+                        className="h-9 text-sm"
+                        placeholder="Interviewer name"
+                        value={detailApp.interviewer_name || ""}
+                        onChange={(e) => setDetailApp({ ...detailApp, interviewer_name: e.target.value })}
+                        onBlur={() => handleUpdateDetail("interviewer_name", detailApp.interviewer_name || null)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] text-muted-foreground">Salary / CTC</label>
+                      <Input
+                        className="h-9 text-sm"
+                        placeholder="e.g. ₹15-25 LPA"
+                        value={detailApp.salary_range || ""}
+                        onChange={(e) => setDetailApp({ ...detailApp, salary_range: e.target.value })}
+                        onBlur={() => handleUpdateDetail("salary_range", detailApp.salary_range || null)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] text-muted-foreground">Meet / Interview Link</label>
+                    <Input
+                      className="h-9 text-sm"
+                      placeholder="https://meet.google.com/..."
+                      value={detailApp.meet_link || ""}
+                      onChange={(e) => setDetailApp({ ...detailApp, meet_link: e.target.value })}
+                      onBlur={() => handleUpdateDetail("meet_link", detailApp.meet_link || null)}
+                    />
+                  </div>
+                </div>
+
+                {/* Tags Section */}
+                <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tags</h4>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(detailApp.tags || []).map((tag) => (
+                      <span
+                        key={tag}
+                        className={cn("text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1",
+                          tag === "Referral" ? "bg-green-500/20 text-green-400" :
+                          tag === "Direct Apply" ? "bg-blue-500/20 text-blue-400" :
+                          tag === "DSA" ? "bg-purple-500/20 text-purple-400" :
+                          tag === "System Design" ? "bg-orange-500/20 text-orange-400" :
+                          tag === "LLD" ? "bg-cyan-500/20 text-cyan-400" :
+                          tag === "HLD" ? "bg-pink-500/20 text-pink-400" :
+                          tag === "Behavioral" ? "bg-yellow-500/20 text-yellow-400" :
+                          "bg-muted text-muted-foreground"
+                        )}
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          className="hover:text-destructive ml-0.5"
+                          onClick={() => {
+                            const newTags = (detailApp.tags || []).filter((t) => t !== tag);
+                            setDetailApp({ ...detailApp, tags: newTags });
+                            handleUpdateDetail("tags", newTags as unknown as string);
+                          }}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {["Referral", "Direct Apply", "DSA", "System Design", "LLD", "HLD", "Behavioral", "OA Done", "Urgent"].filter(
+                      (t) => !(detailApp.tags || []).includes(t)
+                    ).map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        className="text-[10px] px-1.5 py-0.5 rounded border border-border/50 text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
+                        onClick={() => {
+                          const newTags = [...(detailApp.tags || []), tag];
+                          setDetailApp({ ...detailApp, tags: newTags });
+                          fetch(`/api/applications/${detailApp.id}`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ tags: newTags }),
+                          });
+                        }}
+                      >
+                        + {tag}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
