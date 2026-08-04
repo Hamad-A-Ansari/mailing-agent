@@ -4,18 +4,43 @@ import { injectVariables } from "./template-engine";
 import type { EmailTemplate, SubjectLine } from "@/types/database";
 
 /**
- * Create SMTP transporter using Gmail app password.
+ * Create SMTP transporter using the user's stored credentials.
+ * Falls back to env vars if no user config exists.
  */
-function createTransporter() {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: parseInt(process.env.SMTP_PORT || "587", 10),
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
+async function createTransporterForUser(userId: string) {
+  const supabase = createServerSupabaseClient();
+
+  const { data: config } = await supabase
+    .from("user_smtp_config")
+    .select("email, smtp_host, smtp_port, smtp_password_encrypted")
+    .eq("user_id", userId)
+    .single();
+
+  if (config) {
+    const { decrypt } = await import("@/lib/encryption");
+    const password = decrypt(config.smtp_password_encrypted);
+
+    return {
+      transporter: nodemailer.createTransport({
+        host: config.smtp_host,
+        port: config.smtp_port,
+        secure: false,
+        auth: { user: config.email, pass: password },
+      }),
+      fromEmail: config.email,
+    };
+  }
+
+  // Fallback to env vars (backward compat)
+  return {
+    transporter: nodemailer.createTransport({
+      host: process.env.SMTP_HOST || "smtp.gmail.com",
+      port: parseInt(process.env.SMTP_PORT || "587", 10),
+      secure: false,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    }),
+    fromEmail: process.env.SMTP_USER || "",
+  };
 }
 
 /**
@@ -201,8 +226,8 @@ export async function sendBulkOutreach(
   const templateAssignments = pickTemplates(recruiterList, templates);
   const subjectAssignments = pickSubjectLines(recruiterList, subjectLines);
 
-  // Create transporter
-  const transporter = createTransporter();
+  // Create transporter for this user
+  const { transporter, fromEmail } = await createTransporterForUser(userId);
 
   const results: SendResult[] = [];
 
@@ -262,7 +287,7 @@ export async function sendBulkOutreach(
 
       try {
         const mailOptions: nodemailer.SendMailOptions = {
-          from: process.env.SMTP_USER,
+          from: fromEmail,
           to: emailAddr,
           subject,
           text: body,

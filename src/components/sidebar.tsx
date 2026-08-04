@@ -13,6 +13,7 @@ import {
   Search,
   Columns3,
   Link2,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -83,6 +84,12 @@ const navItems: NavItem[] = [
     href: "/activity",
     icon: Activity,
     ownerOnly: true,
+  },
+  {
+    label: "Settings",
+    href: "/settings",
+    icon: Settings,
+    ownerOnly: false,
   },
 ];
 
