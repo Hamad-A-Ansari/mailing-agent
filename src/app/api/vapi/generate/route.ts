@@ -6,7 +6,7 @@ const QUESTION_GEN_MODEL =
   process.env.GROQ_QUESTION_MODEL ?? "llama-3.3-70b-versatile";
 
 export async function GET() {
-  return Response.json({ success: true, data: "PlacePrep Vapi endpoint" }, { status: 200 });
+  return Response.json({ success: true, data: "Place Prep Vapi endpoint" }, { status: 200 });
 }
 
 export async function POST(request: Request) {

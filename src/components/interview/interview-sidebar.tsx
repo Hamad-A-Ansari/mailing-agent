@@ -42,11 +42,11 @@ export function InterviewSidebar() {
       {/* Logo / Brand */}
       <div className="flex h-14 items-center border-b px-4">
         <Link href="/interview" className="flex items-center gap-2 font-semibold">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600">
+          {/* <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600">
             <Mic className="h-3.5 w-3.5 text-white" />
-          </div>
+          </div> */}
           <span className="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent font-bold">
-            PlacePrep
+            Place Prep
           </span>
         </Link>
       </div>
