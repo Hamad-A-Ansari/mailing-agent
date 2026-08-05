@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
 import { getAuthUserId } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import {
@@ -19,21 +19,32 @@ export default async function InterviewDashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Interview Prep</h1>
+      {/* Hero CTA */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600/20 via-indigo-600/15 to-purple-600/10 border border-violet-500/20 p-8">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iYSIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVHJhbnNmb3JtPSJyb3RhdGUoNDUpIj48cGF0aCBkPSJNIC0xMCwzMCBsIDYwLC02MCBNIDAsMjAgbCAyMCwtMjAiIHN0cm9rZT0icmdiYSgxMzksMTAwLDI1NSwwLjA1KSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2EpIi8+PC9zdmc+')] opacity-50" />
+        <div className="relative flex flex-col gap-4 max-w-lg">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-violet-400" />
+            <span className="text-sm font-medium text-violet-300">AI-Powered</span>
+          </div>
+          <h1 className="text-3xl font-bold">
+            Get{" "}
+            <span className="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
+              Interview Ready
+            </span>
+          </h1>
           <p className="text-muted-foreground">
-            Practice mock interviews with AI and get instant feedback
+            Practice with AI mock interviews tailored to your target role and company.
+            Get instant, detailed feedback to improve.
           </p>
+          <Link
+            href="/interview/new"
+            className="mt-2 w-fit inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:from-violet-500 hover:to-indigo-500 transition-all shadow-lg shadow-violet-500/25"
+          >
+            <Plus className="h-4 w-4" />
+            Start an Interview
+          </Link>
         </div>
-        <Link
-          href="/interview/new"
-          className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          New Interview
-        </Link>
       </div>
 
       {/* Your Interviews */}
@@ -55,15 +66,15 @@ export default async function InterviewDashboardPage() {
             ))}
           </div>
         ) : (
-          <div className="rounded-lg border border-dashed p-8 text-center">
+          <div className="rounded-xl border border-dashed border-violet-500/30 bg-violet-500/5 p-8 text-center">
             <p className="text-muted-foreground">
               You haven&apos;t created any interviews yet.
             </p>
             <Link
               href="/interview/new"
-              className="mt-3 inline-flex items-center gap-1 text-sm text-primary hover:underline"
+              className="mt-3 inline-flex items-center gap-1.5 text-sm text-violet-400 hover:text-violet-300 transition-colors"
             >
-              <Plus className="h-3 w-3" />
+              <Plus className="h-3.5 w-3.5" />
               Generate your first interview
             </Link>
           </div>

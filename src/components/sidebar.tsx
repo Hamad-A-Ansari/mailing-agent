@@ -14,7 +14,6 @@ import {
   Columns3,
   Link2,
   Settings,
-  Mic,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -78,12 +77,6 @@ const navItems: NavItem[] = [
     label: "Applications",
     href: "/applications",
     icon: Columns3,
-    ownerOnly: true,
-  },
-  {
-    label: "Interview Prep",
-    href: "/interview",
-    icon: Mic,
     ownerOnly: true,
   },
   {

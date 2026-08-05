@@ -142,44 +142,51 @@ export function Agent({
   return (
     <div className="flex flex-col items-center gap-8">
       {/* Avatars */}
-      <div className="flex items-center gap-12">
+      <div className="flex items-center gap-16">
         {/* AI Interviewer */}
         <div className="flex flex-col items-center gap-3">
           <div className="relative">
             <div
               className={cn(
-                "flex h-24 w-24 items-center justify-center rounded-full bg-primary/10 border-2 border-primary/20",
-                isSpeaking && "border-primary animate-pulse"
+                "flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border-2 border-violet-500/30",
+                isSpeaking && "border-violet-400 shadow-lg shadow-violet-500/20"
               )}
             >
-              <Bot className="h-10 w-10 text-primary" />
+              <Bot className={cn("h-12 w-12 text-violet-400 transition-transform", isSpeaking && "scale-110")} />
             </div>
             {isSpeaking && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-xs text-primary font-medium">
+              <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-violet-500/20 border border-violet-500/30 px-2.5 py-0.5 text-xs text-violet-300 font-medium">
                 Speaking...
               </span>
             )}
           </div>
-          <p className="text-sm font-medium text-muted-foreground">AI Interviewer</p>
+          <p className="text-sm font-medium text-violet-300">AI Interviewer</p>
+        </div>
+
+        {/* Connector */}
+        <div className="flex flex-col items-center gap-1">
+          <div className="h-px w-12 bg-gradient-to-r from-violet-500/50 to-indigo-500/50" />
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">live</span>
+          <div className="h-px w-12 bg-gradient-to-r from-indigo-500/50 to-violet-500/50" />
         </div>
 
         {/* User */}
         <div className="flex flex-col items-center gap-3">
-          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-muted border-2 border-muted-foreground/20">
-            <span className="text-2xl font-bold text-muted-foreground">
+          <div className="flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border-2 border-emerald-500/30">
+            <span className="text-3xl font-bold text-emerald-400">
               {userName?.charAt(0)?.toUpperCase() || "U"}
             </span>
           </div>
-          <p className="text-sm font-medium text-muted-foreground">{userName}</p>
+          <p className="text-sm font-medium text-emerald-300">{userName}</p>
         </div>
       </div>
 
       {/* Transcript */}
       {messages.length > 0 && (
-        <div className="w-full max-w-lg rounded-lg border bg-muted/50 p-4">
+        <div className="w-full max-w-lg rounded-xl border border-violet-500/20 bg-violet-500/5 p-4 backdrop-blur-sm">
           <p
             key={lastMessage}
-            className="text-sm text-foreground animate-in fade-in duration-500"
+            className="text-sm text-foreground/90 leading-relaxed animate-in fade-in duration-500"
           >
             {lastMessage}
           </p>
@@ -193,21 +200,21 @@ export function Agent({
             onClick={handleCall}
             disabled={callStatus === CallStatus.CONNECTING}
             className={cn(
-              "relative flex h-16 w-16 items-center justify-center rounded-full bg-green-600 text-white hover:bg-green-700 transition-colors",
-              callStatus === CallStatus.CONNECTING && "opacity-70"
+              "relative flex h-18 w-18 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-emerald-600 text-white hover:from-green-400 hover:to-emerald-500 transition-all shadow-lg shadow-green-500/25",
+              callStatus === CallStatus.CONNECTING && "opacity-70 animate-pulse"
             )}
           >
             {callStatus === CallStatus.CONNECTING && (
-              <span className="absolute inset-0 animate-ping rounded-full bg-green-600 opacity-75" />
+              <span className="absolute inset-0 animate-ping rounded-full bg-green-500 opacity-50" />
             )}
-            <Phone className="h-6 w-6 relative" />
+            <Phone className="h-7 w-7 relative" />
           </button>
         ) : (
           <button
             onClick={handleDisconnect}
-            className="flex h-16 w-16 items-center justify-center rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors"
+            className="flex h-18 w-18 items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-rose-600 text-white hover:from-red-400 hover:to-rose-500 transition-all shadow-lg shadow-red-500/25"
           >
-            <PhoneOff className="h-6 w-6" />
+            <PhoneOff className="h-7 w-7" />
           </button>
         )}
       </div>
@@ -216,7 +223,7 @@ export function Agent({
         {callStatus === CallStatus.INACTIVE && "Click to start the call"}
         {callStatus === CallStatus.CONNECTING && "Connecting..."}
         {callStatus === CallStatus.ACTIVE && "Call in progress — click the red button to end"}
-        {callStatus === CallStatus.FINISHED && "Processing..."}
+        {callStatus === CallStatus.FINISHED && "Generating feedback..."}
       </p>
     </div>
   );

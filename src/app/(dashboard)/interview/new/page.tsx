@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Sparkles } from "lucide-react";
 import { getAuthUserId } from "@/lib/auth";
 import { Agent } from "@/components/interview/agent";
 
@@ -6,17 +7,24 @@ export default async function NewInterviewPage() {
   const userId = await getAuthUserId();
   if (!userId) redirect("/sign-in");
 
-  // For the generate flow, we need the user's display name.
-  // We'll pass a generic name since Supabase auth doesn't always have display_name.
   const userName = "Candidate";
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div className="text-center space-y-2">
-        <h1 className="text-2xl font-bold">Generate Interview</h1>
-        <p className="text-muted-foreground">
-          Tell the AI what kind of interview you&apos;d like to practice, and
-          it&apos;ll generate tailored questions for you.
+    <div className="mx-auto max-w-2xl space-y-8">
+      <div className="text-center space-y-3">
+        <div className="inline-flex items-center gap-2 rounded-full bg-violet-500/10 border border-violet-500/20 px-3 py-1">
+          <Sparkles className="h-3.5 w-3.5 text-violet-400" />
+          <span className="text-xs font-medium text-violet-300">AI-Powered Generation</span>
+        </div>
+        <h1 className="text-2xl font-bold">
+          Generate{" "}
+          <span className="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
+            Interview
+          </span>
+        </h1>
+        <p className="text-muted-foreground max-w-md mx-auto">
+          Tell the AI your target role, company, and tech stack — it&apos;ll create
+          a tailored interview with questions just for you.
         </p>
       </div>
 

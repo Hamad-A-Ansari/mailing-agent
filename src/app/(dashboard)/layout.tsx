@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAuthUserId, getUserRole, isOwner } from "@/lib/auth";
-import { Sidebar } from "@/components/sidebar";
+import { SidebarWrapper } from "@/components/sidebar-wrapper";
 import { DemoBanner } from "@/components/demo-banner";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ModeSwitcher } from "@/components/mode-switcher";
@@ -21,7 +21,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar userRole={isDemo ? "owner" : userRole} />
+      <SidebarWrapper userRole={isDemo ? "owner" : userRole} />
       <div className="flex flex-1 flex-col overflow-hidden">
         {isDemo && <DemoBanner />}
         <header className="flex h-14 items-center justify-between border-b px-6">

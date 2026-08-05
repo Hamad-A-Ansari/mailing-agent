@@ -12,22 +12,22 @@ const modes = [
 
 export function ModeSwitcher() {
   const pathname = usePathname();
-
   const activeMode = pathname.startsWith("/interview") ? "/interview" : "";
 
   return (
-    <div className="flex items-center rounded-lg border bg-muted/50 p-1">
+    <div className="flex items-center rounded-lg border bg-muted/30 p-1 gap-0.5">
       {modes.map((mode) => {
         const isActive = mode.prefix === activeMode;
+        const isInterview = mode.prefix === "/interview";
         return (
           <Link
             key={mode.label}
             href={mode.href}
             className={cn(
-              "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-              isActive
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+              "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+              isActive && !isInterview && "bg-background text-foreground shadow-sm",
+              isActive && isInterview && "bg-gradient-to-r from-violet-600/90 to-indigo-600/90 text-white shadow-sm",
+              !isActive && "text-muted-foreground hover:text-foreground"
             )}
           >
             <mode.icon className="h-3.5 w-3.5" />
