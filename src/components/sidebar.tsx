@@ -14,6 +14,7 @@ import {
   Columns3,
   Link2,
   Settings,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -105,13 +106,21 @@ export function Sidebar({ userRole }: SidebarProps) {
   );
 
   return (
-    <aside className="flex h-full w-64 flex-col border-r bg-background">
+    <aside className="flex h-full w-64 flex-col border-r bg-gradient-to-b from-background to-background/95">
+      {/* Brand */}
       <div className="flex h-14 items-center border-b px-4">
-        <Link href="/" className="flex items-center gap-2 font-semibold">
-          <span>Switch FAANG</span>
+        <Link href="/" className="flex items-center gap-2.5 font-semibold">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600">
+            <Zap className="h-3.5 w-3.5 text-white" />
+          </div>
+          <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent font-bold">
+            Switch FAANG
+          </span>
         </Link>
       </div>
-      <nav className="flex-1 space-y-1 p-3">
+
+      {/* Navigation */}
+      <nav className="flex-1 space-y-0.5 p-3 overflow-y-auto">
         {visibleItems.map((item) => {
           const isActive =
             item.href === "/"
@@ -123,13 +132,13 @@ export function Sidebar({ userRole }: SidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
                 isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "bg-gradient-to-r from-emerald-500/12 to-teal-500/12 text-emerald-300 border border-emerald-500/20"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
               )}
             >
-              <item.icon className="h-4 w-4" />
+              <item.icon className={cn("h-4 w-4", isActive && "text-emerald-400")} />
               {item.label}
             </Link>
           );

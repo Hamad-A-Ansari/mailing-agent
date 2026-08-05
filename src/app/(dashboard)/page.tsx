@@ -59,7 +59,11 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <h1 className="text-2xl font-bold">
+          <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+            Dashboard
+          </span>
+        </h1>
         <p className="text-muted-foreground">Overview of your outreach activity.</p>
       </div>
 
@@ -79,40 +83,40 @@ export default function DashboardPage() {
           ))
         ) : (
           <>
-        <Card>
+        <Card className="border-emerald-500/10 hover:border-emerald-500/30 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Recruiters</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Users className="h-4 w-4 text-emerald-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalRecruiters ?? 0}</div>
+            <div className="text-2xl font-bold text-emerald-300">{stats?.totalRecruiters ?? 0}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-teal-500/10 hover:border-teal-500/30 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Sent Today</CardTitle>
-            <Mail className="h-4 w-4 text-muted-foreground" />
+            <Mail className="h-4 w-4 text-teal-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.emailsToday ?? 0}</div>
+            <div className="text-2xl font-bold text-teal-300">{stats?.emailsToday ?? 0}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-cyan-500/10 hover:border-cyan-500/30 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">This Week</CardTitle>
-            <Send className="h-4 w-4 text-muted-foreground" />
+            <Send className="h-4 w-4 text-cyan-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.emailsThisWeek ?? 0}</div>
+            <div className="text-2xl font-bold text-cyan-300">{stats?.emailsThisWeek ?? 0}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-emerald-500/10 hover:border-emerald-500/30 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Sent</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <Activity className="h-4 w-4 text-emerald-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalEmailsSent ?? 0}</div>
+            <div className="text-2xl font-bold text-emerald-300">{stats?.totalEmailsSent ?? 0}</div>
           </CardContent>
         </Card>
           </>
@@ -120,10 +124,10 @@ export default function DashboardPage() {
       </div>
       <div className="flex gap-3">
         <Link href="/send">
-          <Button>Send Emails</Button>
+          <Button className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white border-0 shadow-sm">Send Emails</Button>
         </Link>
-        <Link href="/recruiters">
-          <Button variant="outline">View Recruiters</Button>
+        <Link href="/contacts">
+          <Button variant="outline" className="border-emerald-500/20 hover:border-emerald-500/40 hover:bg-emerald-500/5">View Contacts</Button>
         </Link>
       </div>
 

@@ -25,7 +25,7 @@ export function ModeSwitcher() {
             href={mode.href}
             className={cn(
               "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
-              isActive && !isInterview && "bg-background text-foreground shadow-sm",
+              isActive && !isInterview && "bg-gradient-to-r from-emerald-600/80 to-teal-600/80 text-white shadow-sm",
               isActive && isInterview && "bg-gradient-to-r from-violet-600/90 to-indigo-600/90 text-white shadow-sm",
               !isActive && "text-muted-foreground hover:text-foreground"
             )}
