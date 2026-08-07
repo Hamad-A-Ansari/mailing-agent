@@ -14,6 +14,10 @@ import { createClient } from "@supabase/supabase-js";
 import * as fs from "fs";
 import * as path from "path";
 
+// Polyfill WebSocket for Node.js < 22
+import WebSocket from "ws";
+(globalThis as unknown as { WebSocket: unknown }).WebSocket = WebSocket;
+
 // Load env from .env.local
 const envPath = path.resolve(process.cwd(), ".env.local");
 const envContent = fs.readFileSync(envPath, "utf-8");
@@ -39,10 +43,12 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
   process.exit(1);
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
 
 const DATASET_URL =
-  "https://raw.githubusercontent.com/neenza/leetcode-problems/main/merged_problems.json";
+  "https://raw.githubusercontent.com/neenza/leetcode-problems/master/merged_problems.json";
 
 interface RawProblem {
   title: string;
@@ -70,7 +76,39 @@ async function main() {
     process.exit(1);
   }
 
-  const problems: RawProblem[] = await response.json();
+  const raw = await response.json();
+  
+  // Debug: check the actual structure
+  const rawType = typeof raw;
+  const isArray = Array.isArray(raw);
+  console.log(`  Data type: ${rawType}, isArray: ${isArray}`);
+  if (!isArray && rawType === "object") {
+    const keys = Object.keys(raw);
+    console.log(`  Object keys (first 5): ${keys.slice(0, 5).join(", ")}`);
+    console.log(`  Total keys: ${keys.length}`);
+    // Check if first value looks like a problem
+    const firstVal = raw[keys[0]];
+    console.log(`  First value keys: ${Object.keys(firstVal || {}).slice(0, 8).join(", ")}`);
+  }
+
+  // Handle both array format and object-wrapped format
+  let problems: RawProblem[];
+  if (Array.isArray(raw)) {
+    problems = raw;
+  } else if (raw.problems && Array.isArray(raw.problems)) {
+    problems = raw.problems;
+  } else if (typeof raw === "object" && raw !== null) {
+    // Object keyed by something — check if values have "title" property
+    const values = Object.values(raw) as RawProblem[];
+    if (values.length > 0 && values[0]?.title) {
+      problems = values;
+    } else {
+      // Maybe it's a single nested structure
+      problems = Object.values(raw).flat() as RawProblem[];
+    }
+  } else {
+    problems = [];
+  }
   console.log(`✓ Downloaded ${problems.length} problems`);
 
   // Filter to only problems with descriptions and valid difficulty
