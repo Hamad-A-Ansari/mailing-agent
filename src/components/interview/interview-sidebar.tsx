@@ -7,6 +7,7 @@ import {
   Mic,
   PlayCircle,
   MessageSquare,
+  Code2,
   ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,11 @@ const interviewNavItems = [
     label: "Feedback",
     href: "/interview/feedback",
     icon: MessageSquare,
+  },
+  {
+    label: "Coding Problems",
+    href: "/interview/code",
+    icon: Code2,
   },
 ];
 
