@@ -114,15 +114,37 @@ function parseTypeScript(code: string): FunctionSignature | null {
  * Example: "class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {"
  */
 function parseCpp(code: string): FunctionSignature | null {
-  // Match return_type functionName(params)
-  const match = code.match(
-    /(?:public:\s*\n\s*)?([\w<>,\s*&]+?)\s+(\w+)\s*\(([^)]*)\)\s*\{/
+  // Normalize: replace literal \n with actual newlines
+  const normalized = code.replace(/\\n/g, "\n");
+  
+  // Try multiple patterns
+  // Pattern 1: public:\n    returnType functionName(params) {
+  let match = normalized.match(
+    /(?:public:[\s\n]*)([\w<>,\s*&:]+?)\s+(\w+)\s*\(([^)]*)\)\s*(?:const\s*)?\{/
   );
+  
+  // Pattern 2: Just returnType functionName(params) { anywhere
+  if (!match) {
+    match = normalized.match(
+      /((?:vector|string|int|long|bool|double|void|auto|pair|unordered_map|map|set|ListNode|TreeNode)[\w<>,\s*&:]*)\s+(\w+)\s*\(([^)]*)\)\s*(?:const\s*)?\{/
+    );
+  }
+
+  // Pattern 3: very permissive - find any function-looking thing inside Solution class
+  if (!match) {
+    match = normalized.match(
+      /\s+([\w<>,\s*&:]+?)\s+(\w+)\s*\(([^)]*)\)\s*(?:const\s*)?\{/
+    );
+  }
+
   if (!match) return null;
 
   const returnType = match[1].trim();
   const functionName = match[2];
   const paramsStr = match[3] || "";
+
+  // Skip constructor
+  if (functionName === "Solution") return null;
 
   const params: FunctionParam[] = [];
   if (paramsStr.trim()) {
@@ -130,12 +152,12 @@ function parseCpp(code: string): FunctionSignature | null {
     for (const part of paramParts) {
       const trimmed = part.trim();
       // Last word is the name, everything before is type
+      // Handle: "vector<int>& nums" → type="vector<int>&", name="nums"
       const lastSpace = trimmed.lastIndexOf(" ");
       if (lastSpace !== -1) {
         let name = trimmed.slice(lastSpace + 1).replace(/^[&*]+/, "");
-        const type = trimmed.slice(0, lastSpace).trim();
-        // Handle &name
         if (name.startsWith("&")) name = name.slice(1);
+        const type = trimmed.slice(0, lastSpace).trim();
         params.push({ name, type });
       } else {
         params.push({ name: trimmed, type: "auto" });

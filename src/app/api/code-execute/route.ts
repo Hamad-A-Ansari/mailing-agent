@@ -89,6 +89,19 @@ function decodeBase64(str: string | undefined | null): string | null {
 }
 
 /**
+ * For compiled languages, if there's no main(), add one so it at least compiles.
+ */
+function wrapWithBasicMain(code: string, language: string): string {
+  if (language === "cpp" && !code.includes("int main")) {
+    return `#include <bits/stdc++.h>\nusing namespace std;\n\n${code}\n\nint main() {\n    // No test harness - code compiles but won't produce output\n    return 0;\n}\n`;
+  }
+  if (language === "java" && !code.includes("public static void main")) {
+    return `import java.util.*;\nimport java.io.*;\n\n${code}\n\nclass Main {\n    public static void main(String[] args) {\n        // No test harness\n    }\n}\n`;
+  }
+  return code;
+}
+
+/**
  * Compare output with expected, normalizing whitespace and JSON formatting.
  */
 function compareOutput(actual: string | null, expected: string): boolean {
@@ -133,8 +146,9 @@ export async function POST(request: NextRequest) {
       const signature = parseSignature(starterCode, language);
 
       if (!signature) {
-        // Can't parse signature — fall back to raw execution
-        return await executeRaw(code, languageId, "", problemId, language, submit);
+        // Can't parse signature — fall back to raw execution with basic main wrapper
+        const wrappedCode = wrapWithBasicMain(code, language);
+        return await executeRaw(wrappedCode, languageId, "", problemId, language, submit);
       }
 
       let passed = 0;
@@ -223,7 +237,9 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // --- Raw Mode: no harness, just run the code ---
-      return await executeRaw(code, languageId, "", problemId, language, submit);
+      // For compiled languages, wrap with basic main if needed
+      const wrappedCode = wrapWithBasicMain(code, language);
+      return await executeRaw(wrappedCode, languageId, "", problemId, language, submit);
     }
   } catch (error) {
     console.error("Code execution error:", error);
