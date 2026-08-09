@@ -10,6 +10,7 @@ import type { FunctionSignature, FunctionParam } from "./signature-parser";
 
 /**
  * Generate a complete runnable program by wrapping user code with a harness.
+ * The user code should NOT contain imports/includes — we add them.
  */
 export function generateHarness(
   userCode: string,
@@ -17,22 +18,51 @@ export function generateHarness(
   language: string,
   stdinInput: string
 ): { sourceCode: string; stdin: string } {
+  // Strip any includes/imports the user might have added (we provide our own)
+  const cleanCode = stripImports(userCode, language);
+  
   switch (language) {
     case "python3":
     case "python":
-      return { sourceCode: genPython(userCode, signature), stdin: stdinInput };
+      return { sourceCode: genPython(cleanCode, signature), stdin: stdinInput };
     case "javascript":
     case "typescript":
-      return { sourceCode: genJS(userCode, signature), stdin: stdinInput };
+      return { sourceCode: genJS(cleanCode, signature), stdin: stdinInput };
     case "cpp":
-      return { sourceCode: genCpp(userCode, signature), stdin: stdinInput };
+      return { sourceCode: genCpp(cleanCode, signature), stdin: stdinInput };
     case "java":
-      return { sourceCode: genJava(userCode, signature), stdin: stdinInput };
+      return { sourceCode: genJava(cleanCode, signature), stdin: stdinInput };
     case "golang":
     case "go":
-      return { sourceCode: genGo(userCode, signature), stdin: stdinInput };
+      return { sourceCode: genGo(cleanCode, signature), stdin: stdinInput };
     default:
       return { sourceCode: userCode, stdin: stdinInput };
+  }
+}
+
+function stripImports(code: string, language: string): string {
+  switch (language) {
+    case "cpp":
+      return code
+        .split("\n")
+        .filter((l) => !l.trim().startsWith("#include") && !l.trim().startsWith("using namespace"))
+        .join("\n");
+    case "java":
+      return code.split("\n").filter((l) => !l.trim().startsWith("import ")).join("\n");
+    case "python3":
+    case "python":
+      return code
+        .split("\n")
+        .filter((l) => !l.trim().startsWith("from ") && !l.trim().startsWith("import "))
+        .join("\n");
+    case "golang":
+    case "go":
+      return code
+        .replace(/^package\s+\w+\s*\n/m, "")
+        .replace(/import\s*\([^)]*\)\s*\n?/g, "")
+        .replace(/import\s+"[^"]+"\s*\n?/g, "");
+    default:
+      return code;
   }
 }
 
@@ -45,8 +75,14 @@ function genPython(userCode: string, sig: FunctionSignature): string {
     .join("\n");
 
   return [
-    `import sys, json`,
+    `import sys, json, math`,
     `from typing import *`,
+    `from collections import *`,
+    `from heapq import *`,
+    `from bisect import *`,
+    `from functools import *`,
+    `from itertools import *`,
+    `from sortedcontainers import SortedList, SortedDict, SortedSet`,
     ``,
     userCode,
     ``,
@@ -74,6 +110,10 @@ function genJS(userCode: string, sig: FunctionSignature): string {
     .join("\n");
 
   return [
+    `// Built-in DSA helpers (hidden from user)`,
+    `class ListNode { constructor(val, next) { this.val = (val===undefined ? 0 : val); this.next = (next===undefined ? null : next); } }`,
+    `class TreeNode { constructor(val, left, right) { this.val = (val===undefined ? 0 : val); this.left = (left===undefined ? null : left); this.right = (right===undefined ? null : right); } }`,
+    ``,
     userCode,
     ``,
     `const inputs = require('fs').readFileSync('/dev/stdin', 'utf8').trim().split('\\n').filter(Boolean);`,
@@ -194,7 +234,9 @@ function genJava(userCode: string, sig: FunctionSignature): string {
 
   return [
     `import java.util.*;`,
+    `import java.util.stream.*;`,
     `import java.io.*;`,
+    `import java.math.*;`,
     ``,
     userCode,
     ``,

@@ -90,13 +90,21 @@ function decodeBase64(str: string | undefined | null): string | null {
 
 /**
  * For compiled languages, if there's no main(), add one so it at least compiles.
+ * Also prepends all necessary includes/imports that the user doesn't see.
  */
 function wrapWithBasicMain(code: string, language: string): string {
   if (language === "cpp" && !code.includes("int main")) {
-    return `#include <bits/stdc++.h>\nusing namespace std;\n\n${code}\n\nint main() {\n    // No test harness - code compiles but won't produce output\n    return 0;\n}\n`;
+    // Strip any user-added includes (we provide comprehensive ones)
+    const stripped = code.split("\n").filter((l) => !l.trim().startsWith("#include") && !l.trim().startsWith("using namespace")).join("\n");
+    return `#include <bits/stdc++.h>\nusing namespace std;\n\n${stripped}\n\nint main() {\n    return 0;\n}\n`;
   }
   if (language === "java" && !code.includes("public static void main")) {
-    return `import java.util.*;\nimport java.io.*;\n\n${code}\n\nclass Main {\n    public static void main(String[] args) {\n        // No test harness\n    }\n}\n`;
+    const stripped = code.split("\n").filter((l) => !l.trim().startsWith("import ")).join("\n");
+    return `import java.util.*;\nimport java.io.*;\n\n${stripped}\n\nclass Main {\n    public static void main(String[] args) {\n    }\n}\n`;
+  }
+  if ((language === "python3" || language === "python") && !code.includes("if __name__")) {
+    const stripped = code.split("\n").filter((l) => !l.trim().startsWith("from ") && !l.trim().startsWith("import ")).join("\n");
+    return `import sys, json\nfrom typing import *\nfrom collections import *\nfrom heapq import *\nfrom bisect import *\nfrom functools import *\nfrom itertools import *\n\n${stripped}\n`;
   }
   return code;
 }

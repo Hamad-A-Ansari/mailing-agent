@@ -15,6 +15,59 @@ import { Play, Send, Loader2, CheckCircle2, XCircle, Timer } from "lucide-react"
 import { SUPPORTED_LANGUAGES } from "@/types/coding";
 import type { CodingProblem, SupportedLanguageId } from "@/types/coding";
 
+/**
+ * Strip boilerplate (imports, includes, using namespace) from starter code.
+ * User only sees the class/function body. The harness adds them back server-side.
+ */
+function stripBoilerplate(code: string, language: string): string {
+  if (!code) return "";
+  
+  switch (language) {
+    case "cpp": {
+      // Remove #include, using namespace, keep class/struct/function
+      return code
+        .split("\n")
+        .filter((line) => {
+          const trimmed = line.trim();
+          return !trimmed.startsWith("#include") && !trimmed.startsWith("using namespace");
+        })
+        .join("\n")
+        .trim();
+    }
+    case "java": {
+      // Remove import statements, keep class
+      return code
+        .split("\n")
+        .filter((line) => !line.trim().startsWith("import "))
+        .join("\n")
+        .trim();
+    }
+    case "python3":
+    case "python": {
+      // Remove "from typing import *" and similar, keep class
+      return code
+        .split("\n")
+        .filter((line) => {
+          const trimmed = line.trim();
+          return !trimmed.startsWith("from ") && !trimmed.startsWith("import ");
+        })
+        .join("\n")
+        .trim();
+    }
+    case "golang":
+    case "go": {
+      // Remove package, import blocks
+      return code
+        .replace(/^package\s+\w+\s*\n/m, "")
+        .replace(/import\s*\([^)]*\)\s*\n?/g, "")
+        .replace(/import\s+"[^"]+"\s*\n?/g, "")
+        .trim();
+    }
+    default:
+      return code;
+  }
+}
+
 interface ExecutionResult {
   status: string;
   stdout: string | null;
@@ -42,9 +95,9 @@ export default function CodingInterviewPage() {
       .then((r) => r.json())
       .then((data) => {
         setProblem(data);
-        // Set initial code from snippets
+        // Set initial code from snippets — show only the function body
         const snippet = data.codeSnippets?.[language] || data.codeSnippets?.["python3"] || "";
-        setCode(snippet);
+        setCode(stripBoilerplate(snippet, language));
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -53,7 +106,7 @@ export default function CodingInterviewPage() {
   // Update code when language changes
   useEffect(() => {
     if (problem?.codeSnippets?.[language]) {
-      setCode(problem.codeSnippets[language]);
+      setCode(stripBoilerplate(problem.codeSnippets[language], language));
     }
   }, [language, problem]);
 
