@@ -119,7 +119,7 @@ export default function ProblemBrowserPage() {
             <SelectValue placeholder="Difficulty" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="all">All Difficulty</SelectItem>
             <SelectItem value="Easy">Easy</SelectItem>
             <SelectItem value="Medium">Medium</SelectItem>
             <SelectItem value="Hard">Hard</SelectItem>
@@ -130,7 +130,7 @@ export default function ProblemBrowserPage() {
           value={company}
           onValueChange={(v) => { setCompany(v || "all"); setPage(1); }}
         >
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="Company" />
           </SelectTrigger>
           <SelectContent>

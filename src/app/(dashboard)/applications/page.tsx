@@ -436,6 +436,22 @@ export default function ApplicationsPage() {
                                       </span>
                                     </div>
 
+                                    {/* Practice Interview button */}
+                                    <div onClick={(e) => e.stopPropagation()}>
+                                      <button
+                                        onClick={() => {
+                                          const params = new URLSearchParams();
+                                          params.set("company", app.company);
+                                          params.set("role", app.job_title);
+                                          window.location.href = `/interview/new?${params.toString()}`;
+                                        }}
+                                        className="w-full flex items-center justify-center gap-1.5 rounded-md bg-violet-500/10 border border-violet-500/20 py-1.5 text-[10px] font-medium text-violet-400 hover:bg-violet-500/20 transition-colors"
+                                      >
+                                        <Mic className="h-3 w-3" />
+                                        Practice Interview
+                                      </button>
+                                    </div>
+
                                     {/* Row 10: Quick note input */}
                                     <div onClick={(e) => e.stopPropagation()}>
                                       <input
