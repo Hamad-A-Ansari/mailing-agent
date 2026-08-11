@@ -1,6 +1,6 @@
 "use server";
 
-import { generateObject } from "ai";
+import { generateText } from "ai";
 import { groq } from "@ai-sdk/groq";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { feedbackSchema } from "@/constants/interview";
@@ -182,9 +182,8 @@ export async function createFeedback(
       .map((sentence) => `- ${sentence.role}: ${sentence.content}\n`)
       .join("");
 
-    const { object } = await generateObject({
+    const { object } = await generateText({
       model: groq(FEEDBACK_MODEL),
-      schema: feedbackSchema,
       prompt: `
         You are an AI interviewer analyzing a mock interview. Your task is to evaluate the candidate based on structured categories. Be thorough and detailed in your analysis. Don't be lenient with the candidate. If there are mistakes or areas for improvement, point them out.
         Transcript:
@@ -196,9 +195,34 @@ export async function createFeedback(
         - **Problem-Solving**: Ability to analyze problems and propose solutions.
         - **Cultural & Role Fit**: Alignment with company values and job role.
         - **Confidence & Clarity**: Confidence in responses, engagement, and clarity.
+
+        Respond ONLY with a valid JSON object in this exact format (no markdown, no code fences, no extra text):
+        {
+          "totalScore": <number 0-100>,
+          "categoryScores": [
+            {"name": "Communication Skills", "score": <number 0-100>, "comment": "<string>"},
+            {"name": "Technical Knowledge", "score": <number 0-100>, "comment": "<string>"},
+            {"name": "Problem Solving", "score": <number 0-100>, "comment": "<string>"},
+            {"name": "Cultural Fit", "score": <number 0-100>, "comment": "<string>"},
+            {"name": "Confidence and Clarity", "score": <number 0-100>, "comment": "<string>"}
+          ],
+          "strengths": ["<string>", "<string>", ...],
+          "areasForImprovement": ["<string>", "<string>", ...],
+          "finalAssessment": "<string>"
+        }
       `,
       system:
-        "You are a professional interviewer analyzing a mock interview. Your task is to evaluate the candidate based on structured categories.",
+        "You are a professional interviewer analyzing a mock interview. Always respond with valid JSON only. No markdown formatting.",
+    }).then((result) => {
+      // Parse the JSON from the text response
+      let text = result.text.trim();
+      // Strip markdown code fences if present
+      if (text.startsWith("```")) {
+        text = text.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
+      }
+      const parsed = JSON.parse(text);
+      const validated = feedbackSchema.parse(parsed);
+      return { object: validated };
     });
 
     const { data, error } = await supabase
