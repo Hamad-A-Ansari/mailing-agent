@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/resizable";
 import { ProblemPanel } from "@/components/coding/problem-panel";
 import { CodeEditor } from "@/components/coding/code-editor";
+import { CodingTimer } from "@/components/coding/coding-timer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Play, Send, Loader2, CheckCircle2, XCircle, Timer } from "lucide-react";
@@ -68,6 +69,15 @@ function stripBoilerplate(code: string, language: string): string {
   }
 }
 
+interface TestCaseResult {
+  caseNum: number;
+  input: string;
+  expected: string;
+  actual: string;
+  passed: boolean;
+  status: string;
+}
+
 interface ExecutionResult {
   status: string;
   stdout: string | null;
@@ -75,6 +85,9 @@ interface ExecutionResult {
   compile_output: string | null;
   time: string | null;
   memory: number | null;
+  testCasesPassed?: number;
+  testCasesTotal?: number;
+  testResults?: TestCaseResult[];
 }
 
 export default function CodingInterviewPage() {
@@ -204,6 +217,7 @@ export default function CodingInterviewPage() {
               </Select>
 
               <div className="flex items-center gap-2">
+                <CodingTimer />
                 <button
                   onClick={handleRun}
                   disabled={running || submitting}
@@ -254,16 +268,21 @@ export default function CodingInterviewPage() {
                   <TabsContent value="output" className="flex-1 overflow-y-auto px-4 pb-3">
                     {result ? (
                       <div className="space-y-3 pt-2">
-                        {/* Status */}
+                        {/* Overall Status Header */}
                         <div className="flex items-center gap-2">
                           {result.status === "Accepted" ? (
                             <CheckCircle2 className="h-4 w-4 text-green-400" />
                           ) : (
                             <XCircle className="h-4 w-4 text-red-400" />
                           )}
-                          <span className={`text-sm font-medium ${result.status === "Accepted" ? "text-green-400" : "text-red-400"}`}>
+                          <span className={`text-sm font-bold ${result.status === "Accepted" ? "text-green-400" : "text-red-400"}`}>
                             {result.status}
                           </span>
+                          {result.testCasesPassed !== undefined && (
+                            <span className="text-xs text-muted-foreground">
+                              ({result.testCasesPassed}/{result.testCasesTotal} passed)
+                            </span>
+                          )}
                           {result.time && (
                             <span className="flex items-center gap-1 text-xs text-muted-foreground ml-auto">
                               <Timer className="h-3 w-3" />
@@ -272,23 +291,69 @@ export default function CodingInterviewPage() {
                           )}
                         </div>
 
-                        {/* Output */}
-                        {result.stdout && (
-                          <div className="rounded-md bg-muted/50 p-2.5">
-                            <p className="text-[10px] text-muted-foreground mb-1">stdout</p>
-                            <pre className="font-mono text-xs whitespace-pre-wrap text-green-300">{result.stdout}</pre>
+                        {/* Per-test-case results */}
+                        {result.testResults && result.testResults.length > 0 && (
+                          <div className="space-y-2">
+                            {result.testResults.map((tc) => (
+                              <div
+                                key={tc.caseNum}
+                                className={`rounded-lg border p-3 transition-all ${
+                                  tc.passed
+                                    ? "border-green-500/30 bg-green-500/5 shadow-[0_0_8px_rgba(34,197,94,0.1)]"
+                                    : "border-red-500/30 bg-red-500/5 shadow-[0_0_8px_rgba(239,68,68,0.1)]"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 mb-2">
+                                  {tc.passed ? (
+                                    <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />
+                                  ) : (
+                                    <XCircle className="h-3.5 w-3.5 text-red-400" />
+                                  )}
+                                  <span className={`text-xs font-semibold ${tc.passed ? "text-green-400" : "text-red-400"}`}>
+                                    Case {tc.caseNum}
+                                  </span>
+                                  <span className={`text-[10px] ml-auto ${tc.passed ? "text-green-400/70" : "text-red-400/70"}`}>
+                                    {tc.status}
+                                  </span>
+                                </div>
+                                <div className="grid gap-1.5 text-xs font-mono">
+                                  <div>
+                                    <span className="text-[10px] text-muted-foreground">Input:</span>
+                                    <pre className="mt-0.5 whitespace-pre-wrap text-muted-foreground/90">{tc.input}</pre>
+                                  </div>
+                                  <div>
+                                    <span className="text-[10px] text-muted-foreground">Expected:</span>
+                                    <pre className="mt-0.5 whitespace-pre-wrap text-emerald-300">{tc.expected}</pre>
+                                  </div>
+                                  <div>
+                                    <span className="text-[10px] text-muted-foreground">Your Output:</span>
+                                    <pre className={`mt-0.5 whitespace-pre-wrap ${tc.passed ? "text-green-300" : "text-red-300"}`}>
+                                      {tc.actual}
+                                    </pre>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         )}
 
-                        {/* Errors */}
-                        {(result.stderr || result.compile_output) && (
-                          <div className="rounded-md bg-red-500/10 border border-red-500/20 p-2.5">
+                        {/* Compilation/Runtime Errors (when no test results) */}
+                        {(!result.testResults || result.testResults.length === 0) && (result.stderr || result.compile_output) && (
+                          <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3">
                             <p className="text-[10px] text-red-400 mb-1">
                               {result.compile_output ? "Compile Error" : "Runtime Error"}
                             </p>
                             <pre className="font-mono text-xs whitespace-pre-wrap text-red-300">
                               {result.compile_output || result.stderr}
                             </pre>
+                          </div>
+                        )}
+
+                        {/* Fallback: raw stdout if no testResults */}
+                        {(!result.testResults || result.testResults.length === 0) && result.stdout && !result.stderr && !result.compile_output && (
+                          <div className="rounded-md bg-muted/50 p-2.5">
+                            <p className="text-[10px] text-muted-foreground mb-1">stdout</p>
+                            <pre className="font-mono text-xs whitespace-pre-wrap text-green-300">{result.stdout}</pre>
                           </div>
                         )}
                       </div>

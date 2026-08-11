@@ -5,6 +5,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const difficulty = searchParams.get("difficulty");
   const topic = searchParams.get("topic");
+  const company = searchParams.get("company");
   const search = searchParams.get("search");
   const page = parseInt(searchParams.get("page") || "1", 10);
   const pageSize = parseInt(searchParams.get("pageSize") || "20", 10);
@@ -21,6 +22,10 @@ export async function GET(request: NextRequest) {
 
   if (topic) {
     query = query.contains("topics", [topic]);
+  }
+
+  if (company) {
+    query = query.contains("company_tags", [company]);
   }
 
   if (search) {

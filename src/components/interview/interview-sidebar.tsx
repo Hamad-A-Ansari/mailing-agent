@@ -9,6 +9,9 @@ import {
   MessageSquare,
   Code2,
   ArrowLeft,
+  History,
+  BookOpen,
+  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +40,21 @@ const interviewNavItems = [
     label: "Coding Problems",
     href: "/interview/code",
     icon: Code2,
+  },
+  {
+    label: "Curated Lists",
+    href: "/interview/code/lists",
+    icon: BookOpen,
+  },
+  {
+    label: "Topic Progress",
+    href: "/interview/code/progress",
+    icon: TrendingUp,
+  },
+  {
+    label: "Submissions",
+    href: "/interview/code/submissions",
+    icon: History,
   },
 ];
 

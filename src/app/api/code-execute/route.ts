@@ -161,15 +161,24 @@ export async function POST(request: NextRequest) {
 
       let passed = 0;
       const total = testCases.length;
-      let lastStdout: string | null = null;
       let lastStderr: string | null = null;
       let lastCompileOutput: string | null = null;
       let lastTime: string | null = null;
       let lastMemory: number | null = null;
       let lastStatusId = 3;
-      let failedCase: { input: string; expected: string; actual: string } | null = null;
 
-      for (const testCase of testCases) {
+      // Per-test-case results for UI
+      const testResults: Array<{
+        caseNum: number;
+        input: string;
+        expected: string;
+        actual: string;
+        passed: boolean;
+        status: string;
+      }> = [];
+
+      for (let i = 0; i < testCases.length; i++) {
+        const testCase = testCases[i];
         const { sourceCode, stdin } = generateHarness(code, signature, language, testCase.stdin);
         const result = await executeOnJudge0(sourceCode, languageId, stdin);
 
@@ -177,40 +186,47 @@ export async function POST(request: NextRequest) {
         const stderr = decodeBase64(result.stderr);
         const compileOutput = decodeBase64(result.compile_output);
 
-        lastStdout = stdout;
         lastStderr = stderr;
         lastCompileOutput = compileOutput;
         lastTime = result.time ? `${result.time}s` : null;
         lastMemory = result.memory || null;
         lastStatusId = result.status?.id ?? 0;
 
-        // If compilation/runtime error, stop immediately
+        // If compilation/runtime error, mark all remaining as failed and stop
         if (lastStatusId !== 3 && lastStatusId !== 4) {
+          testResults.push({
+            caseNum: i + 1,
+            input: testCase.stdin,
+            expected: testCase.expected,
+            actual: stderr || compileOutput || "(error)",
+            passed: false,
+            status: mapStatus(lastStatusId),
+          });
           break;
         }
 
         // Compare output
-        if (compareOutput(stdout, testCase.expected)) {
+        const casePassed = compareOutput(stdout, testCase.expected);
+        if (casePassed) {
           passed++;
         } else {
-          lastStatusId = 4; // Wrong Answer
-          failedCase = {
-            input: testCase.stdin,
-            expected: testCase.expected,
-            actual: stdout || "(no output)",
-          };
-          break; // Stop on first failure
+          lastStatusId = 4;
         }
+
+        testResults.push({
+          caseNum: i + 1,
+          input: testCase.stdin,
+          expected: testCase.expected,
+          actual: stdout?.trim() || "(no output)",
+          passed: casePassed,
+          status: casePassed ? "Accepted" : "Wrong Answer",
+        });
+
+        // Continue running all test cases (don't stop on first failure)
       }
 
       const allPassed = passed === total;
       const statusText = allPassed ? "Accepted" : mapStatus(lastStatusId);
-
-      // Build detailed output
-      let outputMessage = lastStdout || "";
-      if (failedCase) {
-        outputMessage = `Input:\n${failedCase.input}\n\nExpected:\n${failedCase.expected}\n\nYour Output:\n${failedCase.actual}`;
-      }
 
       // Save submission if requested
       if (submit && problemId) {
@@ -225,7 +241,7 @@ export async function POST(request: NextRequest) {
             status: allPassed ? "accepted" : mapToSubmissionStatus(lastStatusId),
             runtime_ms: lastTime ? Math.round(parseFloat(lastTime) * 1000) : null,
             memory_kb: lastMemory,
-            stdout: outputMessage,
+            stdout: testResults.map((r) => `Case ${r.caseNum}: ${r.actual}`).join("\n"),
             stderr: lastStderr || lastCompileOutput,
             test_cases_passed: passed,
             test_cases_total: total,
@@ -235,13 +251,13 @@ export async function POST(request: NextRequest) {
 
       return Response.json({
         status: statusText,
-        stdout: outputMessage,
         stderr: lastStderr,
         compile_output: lastCompileOutput,
         time: lastTime,
         memory: lastMemory,
         testCasesPassed: passed,
         testCasesTotal: total,
+        testResults,
       });
     } else {
       // --- Raw Mode: no harness, just run the code ---

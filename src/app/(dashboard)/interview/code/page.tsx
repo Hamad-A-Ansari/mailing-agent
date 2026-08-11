@@ -42,6 +42,7 @@ export default function ProblemBrowserPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [difficulty, setDifficulty] = useState<string>("all");
+  const [company, setCompany] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -52,6 +53,7 @@ export default function ProblemBrowserPage() {
     params.set("page", page.toString());
     params.set("pageSize", "30");
     if (difficulty !== "all") params.set("difficulty", difficulty);
+    if (company !== "all") params.set("company", company);
     if (search.trim()) params.set("search", search.trim());
 
     try {
@@ -65,7 +67,7 @@ export default function ProblemBrowserPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, difficulty, search]);
+  }, [page, difficulty, company, search]);
 
   useEffect(() => {
     fetchProblems();
@@ -121,6 +123,27 @@ export default function ProblemBrowserPage() {
             <SelectItem value="Easy">Easy</SelectItem>
             <SelectItem value="Medium">Medium</SelectItem>
             <SelectItem value="Hard">Hard</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={company}
+          onValueChange={(v) => { setCompany(v || "all"); setPage(1); }}
+        >
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="Company" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Companies</SelectItem>
+            <SelectItem value="Google">Google</SelectItem>
+            <SelectItem value="Amazon">Amazon</SelectItem>
+            <SelectItem value="Meta">Meta</SelectItem>
+            <SelectItem value="Microsoft">Microsoft</SelectItem>
+            <SelectItem value="Apple">Apple</SelectItem>
+            <SelectItem value="Netflix">Netflix</SelectItem>
+            <SelectItem value="Uber">Uber</SelectItem>
+            <SelectItem value="Goldman Sachs">Goldman Sachs</SelectItem>
+            <SelectItem value="Bloomberg">Bloomberg</SelectItem>
           </SelectContent>
         </Select>
 

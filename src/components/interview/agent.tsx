@@ -33,6 +33,8 @@ export function Agent({
   feedbackId,
   type,
   questions,
+  prefillCompany,
+  prefillRole,
 }: AgentProps) {
   const router = useRouter();
   const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
@@ -112,6 +114,8 @@ export function Agent({
         variableValues: {
           username: userName,
           userid: userId,
+          ...(prefillCompany && { prefill_company: prefillCompany }),
+          ...(prefillRole && { prefill_role: prefillRole }),
         },
         clientMessages: ["transcript"] as unknown as ClientMessageType,
         serverMessages: [] as unknown as ServerMessageType,

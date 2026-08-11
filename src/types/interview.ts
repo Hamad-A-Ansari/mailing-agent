@@ -56,6 +56,8 @@ export interface AgentProps {
   feedbackId?: string;
   type: "generate" | "interview";
   questions?: string[];
+  prefillCompany?: string;
+  prefillRole?: string;
 }
 
 export interface InterviewFormData {

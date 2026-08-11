@@ -15,6 +15,7 @@ import {
   Link2,
   Settings,
   Zap,
+  CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -84,6 +85,12 @@ const navItems: NavItem[] = [
     label: "Activity",
     href: "/activity",
     icon: Activity,
+    ownerOnly: true,
+  },
+  {
+    label: "Follow-ups",
+    href: "/follow-ups",
+    icon: CalendarClock,
     ownerOnly: true,
   },
   {

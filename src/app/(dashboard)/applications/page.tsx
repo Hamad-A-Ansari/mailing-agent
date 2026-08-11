@@ -45,7 +45,7 @@ import {
   TimelineTitle,
 } from "@/components/reui/timeline";
 import { toast } from "@/components/ui/toast";
-import { Plus, Trash2, ExternalLink, ArrowRight, CalendarIcon, Pencil, MoveRight } from "lucide-react";
+import { Plus, Trash2, ExternalLink, ArrowRight, CalendarIcon, Pencil, MoveRight, Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -494,6 +494,16 @@ export default function ApplicationsPage() {
                                   <ContextMenuItem className="text-destructive" onClick={() => handleDelete(app.id)}>
                                     <Trash2 className="mr-2 h-3.5 w-3.5" />
                                     Delete
+                                  </ContextMenuItem>
+                                  <ContextMenuSeparator />
+                                  <ContextMenuItem onClick={() => {
+                                    const params = new URLSearchParams();
+                                    params.set("company", app.company);
+                                    params.set("role", app.job_title);
+                                    window.location.href = `/interview/new?${params.toString()}`;
+                                  }}>
+                                    <Mic className="mr-2 h-3.5 w-3.5 text-violet-400" />
+                                    <span className="text-violet-400">Practice Interview</span>
                                   </ContextMenuItem>
                                 </ContextMenuContent>
                               </ContextMenu>
