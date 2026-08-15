@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Mail, Mic } from "lucide-react";
 
 const modes = [
-  { label: "Outreach", href: "/", icon: Mail, prefix: "" },
+  { label: "Outreach", href: "/dashboard", icon: Mail, prefix: "" },
   { label: "Interview", href: "/interview", icon: Mic, prefix: "/interview" },
 ] as const;
 

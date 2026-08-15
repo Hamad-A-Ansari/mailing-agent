@@ -33,13 +33,16 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   // Public routes that don't require auth
-  const publicPaths = ["/sign-in", "/sign-up", "/auth/callback"];
+  const publicPaths = ["/sign-in", "/sign-up", "/auth/callback", "/home"];
   const isPublicRoute = publicPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)
   );
 
-  // If not authenticated and not on a public route, redirect to sign-in
-  if (!user && !isPublicRoute) {
+  // The root path "/" is the landing page (public)
+  const isLandingPage = request.nextUrl.pathname === "/";
+
+  // If not authenticated and not on a public route or landing, redirect to sign-in
+  if (!user && !isPublicRoute && !isLandingPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/sign-in";
     return NextResponse.redirect(url);
@@ -48,7 +51,7 @@ export async function middleware(request: NextRequest) {
   // If authenticated and on sign-in/sign-up, redirect to dashboard
   if (user && (request.nextUrl.pathname.startsWith("/sign-in") || request.nextUrl.pathname.startsWith("/sign-up"))) {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
 

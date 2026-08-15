@@ -104,7 +104,7 @@ export function InterviewSidebar() {
       {/* Back to Outreach */}
       <div className="border-t p-3">
         <Link
-          href="/"
+          href="/dashboard"
           className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />

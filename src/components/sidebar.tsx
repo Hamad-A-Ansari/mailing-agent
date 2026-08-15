@@ -29,7 +29,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   {
     label: "Dashboard",
-    href: "/",
+    href: "/dashboard",
     icon: LayoutDashboard,
     ownerOnly: true,
   },
@@ -116,7 +116,7 @@ export function Sidebar({ userRole }: SidebarProps) {
     <aside className="flex h-full w-64 flex-col border-r bg-gradient-to-b from-background to-background/95">
       {/* Brand */}
       <div className="flex h-14 items-center border-b px-4">
-        <Link href="/" className="flex items-center gap-2.5 font-semibold">
+        <Link href="/dashboard" className="flex items-center gap-2.5 font-semibold">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600">
             <Zap className="h-3.5 w-3.5 text-white" />
           </div>
@@ -130,8 +130,8 @@ export function Sidebar({ userRole }: SidebarProps) {
       <nav className="flex-1 space-y-0.5 p-3 overflow-y-auto">
         {visibleItems.map((item) => {
           const isActive =
-            item.href === "/"
-              ? pathname === "/"
+            item.href === "/dashboard"
+              ? pathname === "/dashboard"
               : pathname.startsWith(item.href);
 
           return (

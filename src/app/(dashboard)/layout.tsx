@@ -13,7 +13,7 @@ export default async function DashboardLayout({
   const userId = await getAuthUserId();
 
   if (!userId) {
-    redirect("/sign-in");
+    redirect("/");
   }
 
   const userRole = getUserRole(userId);
