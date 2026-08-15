@@ -1,4 +1,4 @@
-import { getAuthUserId, isOwner } from "@/lib/auth";
+import { getAuthUserId } from "@/lib/auth";
 import { createAuthServerClient } from "@/lib/supabase/auth-server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { injectVariables, sampleData } from "@/lib/email/template-engine";
@@ -16,7 +16,7 @@ const testEmailSchema = z.object({
  */
 export async function POST(request: Request) {
   const userId = await getAuthUserId();
-  if (!userId || !isOwner(userId)) {
+  if (!userId) {
     return Response.json({ error: "Not authorized" }, { status: 403 });
   }
 

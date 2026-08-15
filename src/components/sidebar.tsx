@@ -19,98 +19,23 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface NavItem {
-  label: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  ownerOnly: boolean;
-}
-
-const navItems: NavItem[] = [
-  {
-    label: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-    ownerOnly: true,
-  },
-  {
-    label: "Contacts",
-    href: "/contacts",
-    icon: Users,
-    ownerOnly: false,
-  },
-  {
-    label: "Templates",
-    href: "/templates",
-    icon: FileText,
-    ownerOnly: true,
-  },
-  {
-    label: "Subject Lines",
-    href: "/subject-lines",
-    icon: Type,
-    ownerOnly: true,
-  },
-  {
-    label: "Resumes",
-    href: "/resumes",
-    icon: Paperclip,
-    ownerOnly: true,
-  },
-  {
-    label: "Send",
-    href: "/send",
-    icon: Mail,
-    ownerOnly: true,
-  },
-  {
-    label: "Job Search",
-    href: "/jobs",
-    icon: Search,
-    ownerOnly: true,
-  },
-  {
-    label: "LinkedIn Jobs",
-    href: "/linkedin-jobs",
-    icon: Link2,
-    ownerOnly: true,
-  },
-  {
-    label: "Applications",
-    href: "/applications",
-    icon: Columns3,
-    ownerOnly: true,
-  },
-  {
-    label: "Activity",
-    href: "/activity",
-    icon: Activity,
-    ownerOnly: true,
-  },
-  {
-    label: "Follow-ups",
-    href: "/follow-ups",
-    icon: CalendarClock,
-    ownerOnly: true,
-  },
-  {
-    label: "Settings",
-    href: "/settings",
-    icon: Settings,
-    ownerOnly: false,
-  },
+const navItems = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Contacts", href: "/contacts", icon: Users },
+  { label: "Templates", href: "/templates", icon: FileText },
+  { label: "Subject Lines", href: "/subject-lines", icon: Type },
+  { label: "Resumes", href: "/resumes", icon: Paperclip },
+  { label: "Send", href: "/send", icon: Mail },
+  { label: "Job Search", href: "/jobs", icon: Search },
+  { label: "LinkedIn Jobs", href: "/linkedin-jobs", icon: Link2 },
+  { label: "Applications", href: "/applications", icon: Columns3 },
+  { label: "Activity", href: "/activity", icon: Activity },
+  { label: "Follow-ups", href: "/follow-ups", icon: CalendarClock },
+  { label: "Settings", href: "/settings", icon: Settings },
 ];
 
-interface SidebarProps {
-  userRole: "owner" | "viewer";
-}
-
-export function Sidebar({ userRole }: SidebarProps) {
+export function Sidebar() {
   const pathname = usePathname();
-
-  const visibleItems = navItems.filter(
-    (item) => !item.ownerOnly || userRole === "owner"
-  );
 
   return (
     <aside className="flex h-full w-64 flex-col border-r bg-gradient-to-b from-background to-background/95">
@@ -128,7 +53,7 @@ export function Sidebar({ userRole }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-0.5 p-3 overflow-y-auto">
-        {visibleItems.map((item) => {
+        {navItems.map((item) => {
           const isActive =
             item.href === "/dashboard"
               ? pathname === "/dashboard"

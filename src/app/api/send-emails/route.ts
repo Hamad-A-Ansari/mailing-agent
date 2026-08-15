@@ -1,5 +1,4 @@
 import { getAuthUserId } from "@/lib/auth";
-import { isOwner } from "@/lib/auth";
 import { logActivity } from "@/lib/activity-logger";
 import { sendBulkOutreach } from "@/lib/email/sender";
 import { z } from "zod";
@@ -16,7 +15,7 @@ const sendEmailsSchema = z.object({
  */
 export async function POST(request: Request) {
   const userId = await getAuthUserId();
-  if (!userId || !isOwner(userId)) {
+  if (!userId) {
     return Response.json({ error: "Not authorized" }, { status: 403 });
   }
 

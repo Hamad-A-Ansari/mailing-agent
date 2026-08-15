@@ -38,7 +38,7 @@ export function RecruiterFilters({
   onExportClick,
 }: RecruiterFiltersProps) {
   const [searchValue, setSearchValue] = useState("");
-  const isOwner = userRole === "owner";
+  const isOwner = true;
 
   const handleSearchChange = useCallback(
     (value: string) => {

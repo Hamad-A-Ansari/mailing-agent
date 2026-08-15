@@ -138,26 +138,24 @@ export default async function LandingPage() {
                   <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> Chrome Extension for LinkedIn scraping</li>
                 </ul>
               </div>
-              {/* Placeholder screenshot */}
+              {/* Outreach screenshot */}
               <div className="rounded-xl border bg-gradient-to-br from-emerald-500/5 to-teal-500/5 p-1">
-                <div className="rounded-lg bg-muted/50 h-64 flex items-center justify-center border border-dashed border-emerald-500/20">
-                  <div className="text-center space-y-2">
-                    <Mail className="h-8 w-8 text-emerald-400/50 mx-auto" />
-                    <p className="text-xs text-muted-foreground">Outreach Dashboard Screenshot</p>
-                  </div>
-                </div>
+                <img
+                  src="/screenshots/ss_outreach.png"
+                  alt="Outreach Dashboard"
+                  className="rounded-lg w-full h-auto"
+                />
               </div>
             </div>
 
             {/* Feature 2: Kanban */}
             <div className="grid md:grid-cols-2 gap-8 items-center">
               <div className="order-2 md:order-1 rounded-xl border bg-gradient-to-br from-cyan-500/5 to-blue-500/5 p-1">
-                <div className="rounded-lg bg-muted/50 h-64 flex items-center justify-center border border-dashed border-cyan-500/20">
-                  <div className="text-center space-y-2">
-                    <Columns3 className="h-8 w-8 text-cyan-400/50 mx-auto" />
-                    <p className="text-xs text-muted-foreground">Application Kanban Screenshot</p>
-                  </div>
-                </div>
+                <img
+                  src="/screenshots/ss_kanban.png"
+                  alt="Application Kanban Board"
+                  className="rounded-lg w-full h-auto"
+                />
               </div>
               <div className="order-1 md:order-2 space-y-4">
                 <div className="inline-flex items-center gap-2 rounded-full bg-cyan-500/10 border border-cyan-500/20 px-3 py-1">
@@ -198,24 +196,22 @@ export default async function LandingPage() {
                 </ul>
               </div>
               <div className="rounded-xl border bg-gradient-to-br from-violet-500/5 to-indigo-500/5 p-1">
-                <div className="rounded-lg bg-muted/50 h-64 flex items-center justify-center border border-dashed border-violet-500/20">
-                  <div className="text-center space-y-2">
-                    <Mic className="h-8 w-8 text-violet-400/50 mx-auto" />
-                    <p className="text-xs text-muted-foreground">AI Interview Screenshot</p>
-                  </div>
-                </div>
+                <img
+                  src="/screenshots/ss_aiinterview.png"
+                  alt="AI Voice Interview"
+                  className="rounded-lg w-full h-auto"
+                />
               </div>
             </div>
 
             {/* Feature 4: Coding */}
             <div className="grid md:grid-cols-2 gap-8 items-center">
               <div className="order-2 md:order-1 rounded-xl border bg-gradient-to-br from-amber-500/5 to-orange-500/5 p-1">
-                <div className="rounded-lg bg-muted/50 h-64 flex items-center justify-center border border-dashed border-amber-500/20">
-                  <div className="text-center space-y-2">
-                    <Code2 className="h-8 w-8 text-amber-400/50 mx-auto" />
-                    <p className="text-xs text-muted-foreground">Coding Editor Screenshot</p>
-                  </div>
-                </div>
+                <img
+                  src="/screenshots/ss_leetcode.png"
+                  alt="LeetCode-style Coding Editor"
+                  className="rounded-lg w-full h-auto"
+                />
               </div>
               <div className="order-1 md:order-2 space-y-4">
                 <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/10 border border-amber-500/20 px-3 py-1">

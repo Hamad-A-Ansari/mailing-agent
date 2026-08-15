@@ -68,7 +68,7 @@ export function RecruiterTable({ userRole, isDemo = false }: RecruiterTableProps
     setTimeout(() => setCopiedEmail(null), 2000);
   };
 
-  const isOwner = userRole === "owner";
+  const isOwner = true;
   const pageSize = 20;
 
   const fetchRecruiters = useCallback(async () => {

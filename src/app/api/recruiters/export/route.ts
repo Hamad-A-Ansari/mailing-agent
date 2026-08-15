@@ -1,5 +1,4 @@
 import { getAuthUserId } from "@/lib/auth";
-import { isOwner } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { logActivity } from "@/lib/activity-logger";
 import * as XLSX from "xlsx";
@@ -14,9 +13,9 @@ export async function GET(request: Request) {
     return Response.json({ error: "Not authorized" }, { status: 401 });
   }
 
-  // Only owner can export
-  if (!isOwner(userId)) {
-    return Response.json({ error: "Export disabled in demo mode" }, { status: 403 });
+  // Auth check
+  if (!userId) {
+    return Response.json({ error: "Not authorized" }, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);

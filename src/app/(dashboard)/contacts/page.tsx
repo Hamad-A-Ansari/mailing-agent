@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getAuthUserId, isOwner } from "@/lib/auth";
+import { getAuthUserId } from "@/lib/auth";
 import { RecruiterTable } from "@/components/recruiters/recruiter-table";
 
 export default async function ContactsPage() {
@@ -17,7 +17,7 @@ export default async function ContactsPage() {
           Manage your professional network and track outreach status.
         </p>
       </div>
-      <RecruiterTable userRole="owner" isDemo={!isOwner(userId)} />
+      <RecruiterTable userRole="owner" isDemo={false} />
     </div>
   );
 }

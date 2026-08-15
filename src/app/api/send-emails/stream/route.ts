@@ -1,5 +1,4 @@
 import { getAuthUserId } from "@/lib/auth";
-import { isOwner } from "@/lib/auth";
 import { logActivity } from "@/lib/activity-logger";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { injectVariables } from "@/lib/email/template-engine";
@@ -22,7 +21,7 @@ const sendEmailsSchema = z.object({
  */
 export async function POST(request: Request) {
   const userId = await getAuthUserId();
-  if (!userId || !isOwner(userId)) {
+  if (!userId) {
     return Response.json({ error: "Not authorized" }, { status: 403 });
   }
 

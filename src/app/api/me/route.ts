@@ -1,4 +1,4 @@
-import { getAuthUserId, getUserRole } from "@/lib/auth";
+import { getAuthUserId } from "@/lib/auth";
 
 /**
  * GET /api/me
@@ -10,6 +10,5 @@ export async function GET() {
     return Response.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const role = getUserRole(userId);
-  return Response.json({ userId, role, isDemo: role !== "owner" });
+  return Response.json({ userId, role: "owner", isDemo: false });
 }

@@ -1,5 +1,4 @@
 import { getAuthUserId } from "@/lib/auth";
-import { isOwner } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { logActivity } from "@/lib/activity-logger";
 import { updateRecruiterSchema } from "@/lib/validations";
