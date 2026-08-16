@@ -11,7 +11,7 @@ export function SignOutButton() {
   const handleSignOut = async () => {
     const supabase = createAuthClient();
     await supabase.auth.signOut();
-    router.push("/sign-in");
+    router.push("/");
     router.refresh();
   };
 
