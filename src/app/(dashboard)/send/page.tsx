@@ -199,7 +199,7 @@ export default function SendPage() {
     const res = await fetch("/api/send-emails/test", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ templateCategory: category }),
+      body: JSON.stringify({ templateCategory: category, templateId: selectedTemplateId || undefined }),
     });
     const data = await res.json();
     if (data.success) {
@@ -416,6 +416,14 @@ export default function SendPage() {
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Templates in category</span>
                 <span className="font-medium">{category ? templateCounts[category] || 0 : 0}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Template</span>
+                <span className="font-medium text-emerald-400">
+                  {selectedTemplateId
+                    ? allTemplates.find((t) => t.id === selectedTemplateId)?.name || "Selected"
+                    : `Rotating all (${category ? templateCounts[category] || 0 : 0})`}
+                </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Subject lines</span>

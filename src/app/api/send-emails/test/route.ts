@@ -8,6 +8,7 @@ import { z } from "zod";
 
 const testEmailSchema = z.object({
   templateCategory: z.enum(["outreach", "follow-up", "referral"]),
+  templateId: z.string().optional(),
 });
 
 /**
@@ -39,11 +40,17 @@ export async function POST(request: Request) {
 
   const supabase = createServerSupabaseClient();
 
-  // Get a random template from category
-  const { data: templates } = await supabase
+  // Get template(s) from category
+  let templateQuery = supabase
     .from("email_templates")
     .select("*")
     .eq("category", parsed.data.templateCategory);
+
+  if (parsed.data.templateId) {
+    templateQuery = templateQuery.eq("id", parsed.data.templateId);
+  }
+
+  const { data: templates } = await templateQuery;
 
   if (!templates || templates.length === 0) {
     return Response.json(
