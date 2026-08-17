@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -65,10 +66,8 @@ export function InterviewSidebar() {
     <aside className="flex h-full w-64 flex-col border-r bg-gradient-to-b from-background to-background/95">
       {/* Logo / Brand */}
       <div className="flex h-14 items-center border-b px-4">
-        <Link href="/interview" className="flex items-center gap-2 font-semibold">
-          {/* <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600">
-            <Mic className="h-3.5 w-3.5 text-white" />
-          </div> */}
+        <Link href="/interview" className="flex items-center gap-2.5 font-semibold">
+          <Image src="/logo.svg" alt="Logo" width={28} height={24} className="h-6 w-auto" />
           <span className="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent font-bold">
             Place Prep
           </span>

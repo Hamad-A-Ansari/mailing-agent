@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getCurrentUserId } from "@/lib/supabase/auth-server";
 import {
@@ -7,7 +8,6 @@ import {
   Code2,
   Columns3,
   ArrowRight,
-  Zap,
   Globe,
   CheckCircle2,
 } from "lucide-react";
@@ -25,9 +25,7 @@ export default async function LandingPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 border-b bg-background/80 backdrop-blur-lg">
         <div className="mx-auto flex h-14 sm:h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600">
-              <Zap className="h-4 w-4 text-white" />
-            </div>
+            <Image src="/logo.svg" alt="Switch FAANG" width={32} height={28} className="h-7 w-auto" />
             <span className="font-bold text-lg">Switch FAANG</span>
           </div>
           <div className="flex items-center gap-3">
@@ -288,9 +286,7 @@ export default async function LandingPage() {
       <footer className="border-t py-8 px-6">
         <div className="mx-auto max-w-6xl flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-emerald-500 to-teal-600">
-              <Zap className="h-3 w-3 text-white" />
-            </div>
+            <Image src="/logo.svg" alt="Logo" width={24} height={21} className="h-5 w-auto" />
             <span className="text-sm font-medium">Switch FAANG</span>
             <span className="text-xs text-muted-foreground">
               — Built by Hamad Ahmad Ansari

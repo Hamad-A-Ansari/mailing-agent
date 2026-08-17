@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import {
   LayoutDashboard,
   Users,
@@ -14,7 +15,6 @@ import {
   Columns3,
   Link2,
   Settings,
-  Zap,
   CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -42,9 +42,7 @@ export function Sidebar() {
       {/* Brand */}
       <div className="flex h-14 items-center border-b px-4">
         <Link href="/dashboard" className="flex items-center gap-2.5 font-semibold">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600">
-            <Zap className="h-3.5 w-3.5 text-white" />
-          </div>
+          <Image src="/logo.svg" alt="Logo" width={28} height={24} className="h-6 w-auto" />
           <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent font-bold">
             Switch FAANG
           </span>
