@@ -60,6 +60,8 @@ export default function SendPage() {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
   const [isDemo, setIsDemo] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [allTemplates, setAllTemplates] = useState<Array<{ id: string; name: string; category: string; body: string }>>([]);
 
   // Check if user is in demo mode
   useEffect(() => {
@@ -90,10 +92,12 @@ export default function SendPage() {
   useEffect(() => {
     fetch("/api/templates").then((r) => r.json()).then((data) => {
       const counts: Record<string, number> = {};
-      for (const t of data.templates || []) {
+      const templates = data.templates || [];
+      for (const t of templates) {
         counts[t.category] = (counts[t.category] || 0) + 1;
       }
       setTemplateCounts(counts);
+      setAllTemplates(templates);
     });
     fetch("/api/subject-lines").then((r) => r.json()).then((data) => {
       setSubjectLineCount(data.activeCount || 0);
@@ -138,6 +142,7 @@ export default function SendPage() {
         body: JSON.stringify({
           recruiterIds: [...selected],
           templateCategory: category,
+          templateId: selectedTemplateId || undefined,
           emailTarget,
           resumeId: selectedResumeId || undefined,
           randomizeSubjects,
@@ -211,7 +216,7 @@ export default function SendPage() {
       <div>
         <h1 className="text-2xl font-bold">Send Emails</h1>
         <p className="text-muted-foreground">
-          Step {step} of 4 — {step === 1 ? "Select Recipients" : step === 2 ? "Choose Category" : step === 3 ? "Review" : "Sending"}
+          Step {step} of 4 — {step === 1 ? "Select Recipients" : step === 2 ? "Choose Template" : step === 3 ? "Review" : "Sending"}
         </p>
       </div>
 
@@ -321,21 +326,22 @@ export default function SendPage() {
         </div>
       )}
 
-      {/* Step 2: Choose Category */}
+      {/* Step 2: Choose Template */}
       {step === 2 && (
         <div className="space-y-4">
+          {/* Category selection */}
           <div className="grid gap-4 md:grid-cols-3">
             {(["outreach", "follow-up", "referral"] as const).map((cat) => (
               <Card
                 key={cat}
                 className={`cursor-pointer transition-colors ${category === cat ? "border-primary ring-2 ring-primary/20" : "hover:border-primary/50"}`}
-                onClick={() => setCategory(cat)}
+                onClick={() => { setCategory(cat); setSelectedTemplateId(null); }}
               >
-                <CardHeader>
-                  <CardTitle className="capitalize">{cat}</CardTitle>
+                <CardHeader className="pb-2">
+                  <CardTitle className="capitalize text-sm">{cat}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     {templateCounts[cat] || 0} templates
                   </p>
                   {(templateCounts[cat] || 0) === 0 && (
@@ -345,6 +351,44 @@ export default function SendPage() {
               </Card>
             ))}
           </div>
+
+          {/* Template selection within category */}
+          {category && (templateCounts[category] || 0) > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Select a template:</p>
+              <div className="grid gap-2">
+                {/* "Rotate All" option */}
+                <div
+                  className={`cursor-pointer rounded-lg border p-3 transition-colors ${!selectedTemplateId ? "border-emerald-500 bg-emerald-500/10" : "hover:border-emerald-500/50"}`}
+                  onClick={() => setSelectedTemplateId(null)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Rotate All Templates</p>
+                      <p className="text-xs text-muted-foreground">Randomly pick from all {templateCounts[category]} templates in this category</p>
+                    </div>
+                    <RotateCcw className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
+                {/* Individual templates */}
+                {allTemplates
+                  .filter((t) => t.category === category)
+                  .map((t) => (
+                    <div
+                      key={t.id}
+                      className={`cursor-pointer rounded-lg border p-3 transition-colors ${selectedTemplateId === t.id ? "border-emerald-500 bg-emerald-500/10" : "hover:border-emerald-500/50"}`}
+                      onClick={() => setSelectedTemplateId(t.id)}
+                    >
+                      <p className="text-sm font-medium">{t.name}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                        {t.body.substring(0, 100)}{t.body.length > 100 ? "..." : ""}
+                      </p>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-between">
             <Button variant="outline" onClick={() => setStep(1)}>
               <ArrowLeft className="mr-1 h-4 w-4" /> Back

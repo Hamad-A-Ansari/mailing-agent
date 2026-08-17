@@ -9,6 +9,7 @@ import { z } from "zod";
 const sendEmailsSchema = z.object({
   recruiterIds: z.array(z.string()).min(1).max(50),
   templateCategory: z.enum(["outreach", "follow-up", "referral"]),
+  templateId: z.string().optional(), // specific template to use (overrides random rotation)
   emailTarget: z.enum(["all", "company", "personal"]).default("all"),
   resumeId: z.string().optional(),
   randomizeSubjects: z.boolean().default(true),
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { recruiterIds, templateCategory, emailTarget, resumeId, randomizeSubjects, subjectLineId } = parsed.data;
+  const { recruiterIds, templateCategory, templateId, emailTarget, resumeId, randomizeSubjects, subjectLineId } = parsed.data;
   const uniqueIds = [...new Set(recruiterIds)];
 
   if (uniqueIds.length > 50) {
@@ -54,10 +55,17 @@ export async function POST(request: Request) {
     return Response.json({ error: "No recruiters found" }, { status: 400 });
   }
 
-  const { data: templates } = await supabase
+  let templateQuery = supabase
     .from("email_templates")
     .select("*")
     .eq("category", templateCategory);
+  
+  // If a specific template is chosen, use only that one
+  if (templateId) {
+    templateQuery = templateQuery.eq("id", templateId);
+  }
+
+  const { data: templates } = await templateQuery;
 
   if (!templates || templates.length === 0) {
     return Response.json({ error: "No templates in this category" }, { status: 400 });
