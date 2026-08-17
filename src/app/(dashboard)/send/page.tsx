@@ -487,6 +487,35 @@ export default function SendPage() {
             </CardContent>
           </Card>
 
+          {/* Recipients list */}
+          <Card>
+            <CardContent className="pt-4 pb-3">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium">Sending to ({selected.size} recipients)</span>
+              </div>
+              <div className="max-h-[200px] overflow-y-auto space-y-1">
+                {recruiters
+                  .filter((r) => selected.has(r.id))
+                  .map((r) => (
+                    <div key={r.id} className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted/50 text-sm">
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={`https://www.google.com/s2/favicons?domain=${r.company.toLowerCase().replace(/\s+/g, "")}.com&sz=16`}
+                          alt=""
+                          className="h-3.5 w-3.5 rounded-sm"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                        <span className="font-medium">{r.name}</span>
+                        <span className="text-muted-foreground">·</span>
+                        <span className="text-muted-foreground text-xs">{r.company}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{r.role || "—"}</span>
+                    </div>
+                  ))}
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="flex justify-between">
             <Button variant="outline" onClick={() => setStep(2)}>
               <ArrowLeft className="mr-1 h-4 w-4" /> Back
