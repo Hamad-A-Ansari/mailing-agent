@@ -98,7 +98,7 @@ export function TemplateForm({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[60vw] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEdit ? "Edit Template" : "Create Template"}
@@ -135,17 +135,20 @@ export function TemplateForm({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Body *</label>
-              <AIEmailGenerator onGenerated={(email) => form.setValue("body", email)} />
             </div>
-            <div className="flex flex-wrap gap-1 mb-2">
+            
+            {/* AI Email Generator — full width when open */}
+            <AIEmailGenerator onGenerated={(email) => form.setValue("body", email)} />
+            
+            <div className="flex flex-wrap gap-1">
               {templateVariables.map((v) => (
                 <Badge
                   key={v.key}
                   variant="secondary"
-                  className="cursor-pointer hover:bg-primary/20"
+                  className="cursor-pointer hover:bg-primary/20 text-xs"
                   onClick={() => insertVariable(v.key)}
                 >
                   {`\${${v.key}}`}
@@ -159,7 +162,7 @@ export function TemplateForm({
                 textareaRef.current = e;
               }}
               placeholder="Write your email template body..."
-              className="w-full min-h-[400px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="w-full min-h-[250px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y"
             />
             {form.formState.errors.body && (
               <p className="text-xs text-destructive">
