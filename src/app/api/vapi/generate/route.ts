@@ -3,7 +3,7 @@ import { groq } from "@ai-sdk/groq";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const QUESTION_GEN_MODEL =
-  process.env.GROQ_QUESTION_MODEL ?? "llama-3.3-70b-versatile";
+  process.env.GROQ_QUESTION_MODEL ?? "openai/gpt-oss-120b";
 
 export async function GET() {
   return Response.json({ success: true, data: "Place Prep Vapi endpoint" }, { status: 200 });

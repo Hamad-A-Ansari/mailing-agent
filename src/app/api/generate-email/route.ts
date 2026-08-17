@@ -3,7 +3,7 @@ import { generateText } from "ai";
 import { groq } from "@ai-sdk/groq";
 import { getAuthUserId } from "@/lib/auth";
 
-const MODEL = process.env.GROQ_EMAIL_MODEL ?? "llama-3.3-70b-versatile";
+const MODEL = process.env.GROQ_EMAIL_MODEL ?? "openai/gpt-oss-120b";
 
 export async function POST(request: NextRequest) {
   const userId = await getAuthUserId();

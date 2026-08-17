@@ -10,7 +10,7 @@ import type {
   CreateFeedbackParams,
 } from "@/types/interview";
 
-const FEEDBACK_MODEL = process.env.GROQ_FEEDBACK_MODEL ?? "llama-3.3-70b-versatile";
+const FEEDBACK_MODEL = process.env.GROQ_FEEDBACK_MODEL ?? "openai/gpt-oss-120b";
 
 // ---------- Row → Domain mappers ----------
 
