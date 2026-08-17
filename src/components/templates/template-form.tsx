@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { templateVariables } from "@/lib/email/template-engine";
+import { AIEmailGenerator } from "@/components/templates/ai-email-generator";
 import type { EmailTemplate } from "@/types/database";
 import { useRef, useEffect } from "react";
 
@@ -135,7 +136,10 @@ export function TemplateForm({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Body *</label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">Body *</label>
+              <AIEmailGenerator onGenerated={(email) => form.setValue("body", email)} />
+            </div>
             <div className="flex flex-wrap gap-1 mb-2">
               {templateVariables.map((v) => (
                 <Badge

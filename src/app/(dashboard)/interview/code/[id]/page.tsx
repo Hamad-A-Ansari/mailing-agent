@@ -172,6 +172,26 @@ export default function CodingInterviewPage() {
     }
   };
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Enter or Cmd+Enter → Run
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (!running && !submitting) handleRun();
+      }
+      // Ctrl+Shift+Enter or Cmd+Shift+Enter → Submit
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "Enter") {
+        e.preventDefault();
+        if (!running && !submitting) handleSubmit();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running, submitting, code, language, problemId]);
+
   if (loading) {
     return (
       <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
@@ -222,17 +242,21 @@ export default function CodingInterviewPage() {
                   onClick={handleRun}
                   disabled={running || submitting}
                   className="inline-flex items-center gap-1.5 rounded-md bg-muted px-3 py-1.5 text-xs font-medium hover:bg-muted/80 transition-colors disabled:opacity-50"
+                  title="Run (Ctrl+Enter)"
                 >
                   {running ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
                   Run
+                  <kbd className="ml-1 hidden sm:inline-flex items-center rounded bg-background/50 px-1 py-0.5 text-[9px] text-muted-foreground border">⌘↵</kbd>
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={running || submitting}
                   className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-green-600 to-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:from-green-500 hover:to-emerald-500 transition-all disabled:opacity-50"
+                  title="Submit (Ctrl+Shift+Enter)"
                 >
                   {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                   Submit
+                  <kbd className="ml-1 hidden sm:inline-flex items-center rounded bg-white/10 px-1 py-0.5 text-[9px] text-white/70 border border-white/20">⌘⇧↵</kbd>
                 </button>
               </div>
             </div>
