@@ -145,14 +145,26 @@ export function RecruiterTable({ userRole, isDemo = false }: RecruiterTableProps
 
   const handleEdit = async (data: Record<string, unknown>) => {
     if (!editingRecruiter) return;
-    await fetch(`/api/recruiters/${editingRecruiter.id}`, {
+    
+    // Optimistic update — update local state immediately
+    setRecruiters((prev) =>
+      prev.map((r) => (r.id === editingRecruiter.id ? { ...r, ...data } as typeof r : r))
+    );
+    setEditingRecruiter(undefined);
+    toast.add({ title: "Contact updated", type: "success" });
+
+    // Persist in background
+    const res = await fetch(`/api/recruiters/${editingRecruiter.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    setEditingRecruiter(undefined);
-    toast.add({ title: "Contact updated", type: "success" });
-    fetchRecruiters();
+    
+    // If failed, rollback by re-fetching
+    if (!res.ok) {
+      toast.add({ title: "Update failed, refreshing...", type: "error" });
+      fetchRecruiters();
+    }
   };
 
   const handleExport = async () => {
