@@ -365,21 +365,40 @@ async function saveContact() {
 
 // ─── Initialize ──────────────────────────────────────────────────────────────
 
-if (window.location.pathname.startsWith("/in/")) {
-  setTimeout(injectUI, 1500);
-
-  // Handle LinkedIn SPA navigation
-  let lastUrl = window.location.href;
-  const observer = new MutationObserver(() => {
-    if (window.location.href !== lastUrl) {
-      lastUrl = window.location.href;
-      interceptedEmails = []; // Reset for new profile
-      if (window.location.pathname.startsWith("/in/")) {
-        const old = document.getElementById("sf-capture-btn");
-        if (old) old.remove();
-        setTimeout(injectUI, 1500);
+function init() {
+  if (window.location.pathname.startsWith("/in/")) {
+    // Wait for body to exist before injecting UI
+    function waitForBody(callback) {
+      if (document.body) {
+        callback();
+      } else {
+        const obs = new MutationObserver(() => {
+          if (document.body) { obs.disconnect(); callback(); }
+        });
+        obs.observe(document.documentElement, { childList: true });
       }
     }
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
+
+    waitForBody(() => {
+      setTimeout(injectUI, 2000);
+
+      // Handle LinkedIn SPA navigation
+      let lastUrl = window.location.href;
+      const observer = new MutationObserver(() => {
+        if (window.location.href !== lastUrl) {
+          lastUrl = window.location.href;
+          interceptedEmails = []; // Reset for new profile
+          if (window.location.pathname.startsWith("/in/")) {
+            const old = document.getElementById("sf-capture-btn");
+            if (old) old.remove();
+            setTimeout(injectUI, 2000);
+          }
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    });
+  }
 }
+
+// The interceptor setup runs immediately (document_start), but UI waits for DOM
+init();
