@@ -14,39 +14,79 @@ function extractProfile() {
     phone: null,
   };
 
-  // Name - try multiple selectors for different LinkedIn layouts
-  const nameSelectors = [
-    'h1.text-heading-xlarge',
-    'h1[class*="text-heading"]',
-    'h1[class*="artdeco-entity-lockup__title"]',
-    '.pv-text-details__left-panel h1',
-    'main section h1',
-    '.ph5 h1',
-    'main h1',
-    'h1'
-  ];
-  for (const sel of nameSelectors) {
-    const el = document.querySelector(sel);
-    if (el && el.textContent?.trim() && el.textContent.trim().length < 100) {
-      profile.name = el.textContent.trim();
-      break;
+  // ─── Strategy 1: Use document.title (always works) ───────────────────
+  // LinkedIn title format: "Name - Title - Company | LinkedIn"
+  const pageTitle = document.title || "";
+  const titleParts = pageTitle.replace(" | LinkedIn", "").split(" - ").map(s => s.trim());
+  if (titleParts.length >= 1) profile.name = titleParts[0];
+  if (titleParts.length >= 2) profile.title = titleParts[1];
+  if (titleParts.length >= 3) profile.company = titleParts[2];
+
+  // ─── Strategy 2: Use meta/og tags (reliable) ────────────────────────
+  const ogTitle = document.querySelector('meta[property="og:title"]')?.content || "";
+  if (ogTitle && !profile.name) {
+    // Format: "Name - Title | LinkedIn"
+    const parts = ogTitle.replace(" | LinkedIn", "").split(" - ");
+    if (parts[0]) profile.name = parts[0].trim();
+    if (parts[1]) profile.title = parts[1].trim();
+  }
+
+  const ogDescription = document.querySelector('meta[property="og:description"]')?.content || "";
+  if (ogDescription) {
+    // Often contains company/location info
+    const descParts = ogDescription.split("·").map(s => s.trim());
+    if (!profile.company && descParts.length > 0) {
+      // Try to find company in description
+      for (const part of descParts) {
+        if (part && !part.includes("connections") && !part.includes("followers") && !part.includes("experience")) {
+          if (!profile.location && (part.includes(",") || part.includes("India") || part.includes("USA"))) {
+            profile.location = part;
+          } else if (!profile.company) {
+            profile.company = part;
+          }
+        }
+      }
     }
   }
 
-  // Headline/Title - usually the first div.text-body-medium after the name
-  const titleSelectors = [
-    '.text-body-medium[data-generated-suggestion-target]',
-    'main .text-body-medium',
-    'main section .text-body-medium',
-    '.ph5 .text-body-medium',
-    '.pv-text-details__left-panel .text-body-medium',
-    'div.text-body-medium',
-  ];
-  for (const sel of titleSelectors) {
-    const el = document.querySelector(sel);
-    if (el && el.textContent?.trim()) {
-      profile.title = el.textContent.trim();
-      break;
+  // ─── Strategy 3: DOM selectors (may work, may not) ──────────────────
+  // Name
+  if (!profile.name) {
+    const nameSelectors = [
+      'h1.text-heading-xlarge',
+      'h1[class*="text-heading"]',
+      'h1[class*="artdeco-entity-lockup__title"]',
+      '.pv-text-details__left-panel h1',
+      'main section h1',
+      '.ph5 h1',
+      'main h1',
+      'h1'
+    ];
+    for (const sel of nameSelectors) {
+      const el = document.querySelector(sel);
+      if (el && el.textContent?.trim() && el.textContent.trim().length < 80) {
+        profile.name = el.textContent.trim();
+        break;
+      }
+    }
+  }
+
+  // Headline/Title
+  if (!profile.title) {
+    const titleSelectors = [
+      '.text-body-medium[data-generated-suggestion-target]',
+      'main .text-body-medium',
+      'main section .text-body-medium',
+      '.ph5 .text-body-medium',
+      '.pv-text-details__left-panel .text-body-medium',
+      'div.text-body-medium',
+    ];
+    for (const sel of titleSelectors) {
+      const el = document.querySelector(sel);
+      if (el && el.textContent?.trim()) {
+        profile.title = el.textContent.trim();
+        break;
+      }
     }
   }
 
@@ -66,11 +106,18 @@ function extractProfile() {
     }
   }
 
-  // If no company found, try extracting from title ("... at Microsoft")
+  // If no company found, try extracting from title ("... at Microsoft" or "... | Microsoft")
   if (!profile.company && profile.title) {
     const atMatch = profile.title.match(/(?:at|@|,)\s+([^|·•,]+)/i);
     if (atMatch) {
       profile.company = atMatch[1].trim();
+    } else {
+      // Try pipe-separated: "Engineering Leader | Microsoft | xFlipkart"
+      const pipeParts = profile.title.split("|").map(s => s.trim()).filter(Boolean);
+      if (pipeParts.length >= 2) {
+        // Second part is usually the company
+        profile.company = pipeParts[1];
+      }
     }
   }
 
@@ -81,6 +128,45 @@ function extractProfile() {
       profile.company = companyLink.textContent?.trim() || '';
     }
   }
+
+  // ─── Extract from Experience section (current role + company) ───────────
+  try {
+    const experienceSection = document.querySelector('#experience')
+      || document.querySelector('section[id*="experience"]')
+      || document.querySelector('[data-section="experience"]');
+
+    if (experienceSection) {
+      const firstItem = experienceSection.querySelector('li');
+      if (firstItem) {
+        // Company: look for company link or bold text
+        if (!profile.company) {
+          const companyEl = firstItem.querySelector('span[class*="hoverable-link-text"]')
+            || firstItem.querySelector('a[href*="/company/"] span')
+            || firstItem.querySelector('[class*="subtitle"] span');
+          if (companyEl) profile.company = companyEl.textContent.trim();
+        }
+        // Role: first bold span in the experience item
+        if (!profile.title || profile.title === profile.name) {
+          const roleEl = firstItem.querySelector('span[class*="t-bold"] span[aria-hidden="true"]')
+            || firstItem.querySelector('span[class*="t-bold"]')
+            || firstItem.querySelector('div[class*="t-bold"] span');
+          if (roleEl) profile.title = roleEl.textContent.trim();
+        }
+      }
+    }
+
+    // Fallback: any /company/ links on the page
+    if (!profile.company) {
+      const companyLinks = document.querySelectorAll('a[href*="/company/"]');
+      for (const link of companyLinks) {
+        const text = (link.textContent || '').trim();
+        if (text && text.length > 1 && text.length < 50 && !text.includes("Follow")) {
+          profile.company = text;
+          break;
+        }
+      }
+    }
+  } catch { /* ignore */ }
 
   // Location
   const locationSelectors = [

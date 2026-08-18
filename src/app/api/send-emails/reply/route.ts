@@ -90,11 +90,38 @@ export async function POST(request: NextRequest) {
   });
 
   try {
+    // Build the quoted original message (like Gmail does)
+    const originalDate = new Date(originalEmail.sent_at).toLocaleString("en-US", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+    const quotedOriginal = `\n\nOn ${originalDate}, ${smtpUser} wrote:\n> ${originalEmail.body.split("\n").join("\n> ")}`;
+    
+    const fullBody = body + quotedOriginal;
+
+    // Also build HTML version for better rendering
+    const htmlBody = `
+      <div>${body.replace(/\n/g, "<br>")}</div>
+      <br>
+      <div class="gmail_quote" style="margin:0 0 0 .8ex;border-left:1px solid #ccc;padding-left:1ex;">
+        <p style="color:#888;font-size:12px;">On ${originalDate}, ${smtpUser} &lt;${smtpUser}&gt; wrote:</p>
+        <blockquote style="margin:0;padding:0;color:#555;">
+          ${originalEmail.body.replace(/\n/g, "<br>")}
+        </blockquote>
+      </div>
+    `;
+
     const mailOptions: nodemailer.SendMailOptions = {
       from: smtpUser,
       to: originalEmail.to_email,
       subject: replySubject,
-      text: body,
+      text: fullBody,
+      html: htmlBody,
       headers: {},
     };
 

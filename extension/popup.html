@@ -7,76 +7,83 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      width: 340px;
+      width: 360px;
       min-height: 200px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #1a1a1a;
+      background: #111118;
       color: #e5e5e5;
-      padding: 16px;
+      padding: 14px;
     }
     .header {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #333;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #2a2a3a;
     }
-    .header h1 { font-size: 16px; font-weight: 700; }
-    .header span { font-size: 11px; color: #888; }
-    .status { padding: 12px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
-    .status.warning { background: #3a2a1a; border: 1px solid #f59e0b33; color: #fbbf24; }
-    .job-count, .profile-title { font-size: 24px; font-weight: 700; text-align: center; margin: 12px 0 4px; }
-    .job-label { font-size: 12px; color: #888; text-align: center; margin-bottom: 12px; }
+    .header h1 { font-size: 15px; font-weight: 700; }
+    .header span { font-size: 10px; color: #888; }
+    .mode-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #10b981;
+      text-align: center;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    .status { padding: 10px; border-radius: 8px; margin-bottom: 10px; font-size: 12px; }
+    .status.warning { background: #1a1a0a; border: 1px solid #f59e0b22; color: #fbbf24; }
+    .form-group { margin-bottom: 8px; }
+    .form-group label { display: block; font-size: 10px; color: #888; margin-bottom: 3px; font-weight: 500; }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%;
+      padding: 7px 9px;
+      border-radius: 6px;
+      border: 1px solid #2a2a3a;
+      background: #0a0a14;
+      color: #eee;
+      font-size: 12px;
+      outline: none;
+    }
+    .form-group input:focus, .form-group textarea:focus { border-color: #10b981; }
+    .form-group textarea { resize: vertical; min-height: 50px; font-family: monospace; font-size: 11px; }
+    .form-group select { appearance: none; -webkit-appearance: none; }
+    .row { display: flex; gap: 8px; }
+    .row > * { flex: 1; }
     button {
       width: 100%;
-      padding: 10px 16px;
-      border-radius: 8px;
+      padding: 9px 16px;
+      border-radius: 7px;
       border: none;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.15s;
     }
-    button.primary { background: #fff; color: #000; }
-    button.primary:hover { background: #e5e5e5; }
-    button.primary:disabled { background: #444; color: #888; cursor: not-allowed; }
-    button.secondary { background: transparent; color: #888; border: 1px solid #333; margin-top: 8px; }
-    button.secondary:hover { border-color: #555; color: #e5e5e5; }
-    .settings { margin-top: 12px; padding-top: 12px; border-top: 1px solid #333; }
-    .settings label { font-size: 11px; color: #888; display: block; margin-bottom: 4px; }
+    button.primary { background: linear-gradient(135deg, #10b981, #0d9488); color: white; }
+    button.primary:hover { opacity: 0.9; }
+    button.primary:disabled { background: #333; color: #666; cursor: not-allowed; }
+    button.secondary { background: transparent; color: #888; border: 1px solid #2a2a3a; margin-top: 6px; font-size: 11px; }
+    button.secondary:hover { border-color: #444; color: #e5e5e5; }
+    .settings { margin-top: 10px; padding-top: 10px; border-top: 1px solid #2a2a3a; }
+    .settings label { font-size: 10px; color: #666; display: block; margin-bottom: 3px; }
     .settings input {
       width: 100%;
-      padding: 8px;
-      border-radius: 6px;
-      border: 1px solid #333;
-      background: #222;
-      color: #e5e5e5;
-      font-size: 12px;
+      padding: 6px 8px;
+      border-radius: 5px;
+      border: 1px solid #2a2a3a;
+      background: #0a0a14;
+      color: #eee;
+      font-size: 11px;
     }
-    .settings input:focus { outline: none; border-color: #555; }
-    .result { margin-top: 12px; font-size: 12px; text-align: center; }
-    .profile-card {
-      background: #222;
-      border: 1px solid #333;
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 12px;
-    }
-    .profile-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-    .profile-detail { font-size: 12px; color: #888; margin-bottom: 2px; }
-    .email-section { margin-bottom: 12px; }
-    .section-label { font-size: 11px; color: #888; margin-bottom: 4px; font-weight: 600; }
-    .email-found { font-size: 12px; color: #4ade80; margin-bottom: 2px; }
-    .email-guess { font-size: 12px; color: #fbbf24; margin-bottom: 2px; }
-    .mode-label {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #666;
-      text-align: center;
-      margin-bottom: 8px;
-    }
+    .result { margin-top: 8px; font-size: 11px; text-align: center; }
+    .hint { font-size: 9px; color: #666; margin-top: 2px; }
+
+    /* Jobs mode */
+    .job-count { font-size: 22px; font-weight: 700; text-align: center; margin: 8px 0 2px; }
+    .job-label { font-size: 11px; color: #888; text-align: center; margin-bottom: 10px; }
   </style>
 </head>
 <body>
@@ -92,20 +99,56 @@
 
   <!-- Jobs Mode -->
   <div id="jobs-mode" style="display:none;">
-    <div class="mode-label">Jobs Mode</div>
+    <div class="mode-label">JOBS MODE</div>
     <div class="job-count" id="job-count">—</div>
     <div class="job-label">jobs found on this page</div>
     <button class="primary" id="save-jobs-btn" disabled>Save to Switch FAANG</button>
     <div id="jobs-result" class="result" style="display:none;"></div>
   </div>
 
-  <!-- Profile Mode -->
+  <!-- Profile/Contact Mode — Always shows an editable form -->
   <div id="profile-mode" style="display:none;">
-    <div class="mode-label">Contact Mode</div>
-    <div id="profile-info">
-      <p style="color:#888; text-align:center; padding:12px 0;">Loading profile...</p>
+    <div class="mode-label">CONTACT MODE</div>
+    
+    <div class="row">
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="contact-name" placeholder="Full name" />
+      </div>
+      <div class="form-group">
+        <label>Company</label>
+        <input type="text" id="contact-company" placeholder="Company" />
+      </div>
     </div>
-    <button class="primary" id="save-contact-btn" disabled>Save Contact to Switch FAANG</button>
+
+    <div class="form-group">
+      <label>Title</label>
+      <input type="text" id="contact-title" placeholder="Job title" />
+    </div>
+
+    <div class="form-group">
+      <label>Emails (paste from ContactOut/SignalHire)</label>
+      <textarea id="contact-emails" placeholder="one@company.com&#10;two@gmail.com"></textarea>
+      <p class="hint">Comma or newline separated. Copy from your email tool and paste here.</p>
+    </div>
+
+    <div class="row">
+      <div class="form-group">
+        <label>Role</label>
+        <select id="contact-role">
+          <option value="Recruiter">Recruiter</option>
+          <option value="Software Developer">Software Dev</option>
+          <option value="Engineering Manager">Eng Manager</option>
+          <option value="Hiring Manager">Hiring Manager</option>
+          <option value="Director">Director</option>
+          <option value="VP">VP</option>
+          <option value="Talent Sourcer">Talent Sourcer</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="primary" id="save-contact-btn">Save Contact to Switch FAANG</button>
     <div id="profile-result" class="result" style="display:none;"></div>
   </div>
 

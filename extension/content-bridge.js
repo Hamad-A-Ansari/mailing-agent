@@ -1,44 +1,43 @@
 /**
  * Bridge script: Runs in ISOLATED world.
- * Listens for messages from the MAIN world content-capture.js
- * and provides chrome.storage access + API calls with credentials.
+ * 
+ * 1. Listens for intercepted emails from MAIN world (via CustomEvent)
+ *    and stores them in chrome.storage.local for the popup to read.
+ * 2. Handles profile extraction requests from the popup.
  */
 
-const DEFAULT_API_URL = "https://switch-faang.vercel.app";
-
-// Listen for messages from the MAIN world script
-window.addEventListener("message", async (event) => {
-  if (event.source !== window) return;
-  if (!event.data || event.data.source !== "sf-capture") return;
-
-  const { action, payload, requestId } = event.data;
-
-  if (action === "getApiUrl") {
-    const result = await chrome.storage.sync.get(["apiUrl"]);
-    window.postMessage({ source: "sf-bridge", requestId, data: result.apiUrl || DEFAULT_API_URL }, "*");
+// Listen for emails captured by the MAIN world interceptor
+window.addEventListener("sf-emails-captured", (event) => {
+  const emails = event.detail?.emails || [];
+  if (emails.length > 0) {
+    chrome.storage.local.set({ interceptedEmails: emails });
+    console.log("[Switch FAANG Bridge] Stored", emails.length, "intercepted emails");
   }
+});
 
-  if (action === "saveContact") {
-    const result = await chrome.storage.sync.get(["apiUrl"]);
-    const apiUrl = result.apiUrl || DEFAULT_API_URL;
-
-    try {
-      const res = await fetch(`${apiUrl}/api/recruiters`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        window.postMessage({ source: "sf-bridge", requestId, error: err.error || `HTTP ${res.status}` }, "*");
-      } else {
-        const data = await res.json();
-        window.postMessage({ source: "sf-bridge", requestId, data }, "*");
-      }
-    } catch (err) {
-      window.postMessage({ source: "sf-bridge", requestId, error: err.message || "Network error" }, "*");
-    }
+// Clear intercepted emails when navigating to a new profile
+let lastProfileUrl = window.location.href;
+const observer = new MutationObserver(() => {
+  if (window.location.href !== lastProfileUrl) {
+    lastProfileUrl = window.location.href;
+    chrome.storage.local.set({ interceptedEmails: [] });
   }
+});
+if (document.body) {
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+
+// Also respond to popup requests for page-scraped emails
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "getPageEmails") {
+    // Scan visible page text for emails (fallback)
+    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+    const text = document.body?.innerText || "";
+    const found = (text.match(emailRegex) || [])
+      .map((e) => e.toLowerCase())
+      .filter((e) => !e.includes("linkedin.com") && !e.includes("licdn.com") && !e.includes("example.com"));
+    const unique = [...new Set(found)];
+    sendResponse({ emails: unique });
+  }
+  return true;
 });

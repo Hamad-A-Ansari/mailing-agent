@@ -1,225 +1,247 @@
 /**
  * Popup script for Switch FAANG Chrome Extension.
- * Handles both LinkedIn Jobs pages and Profile pages.
+ * Profile mode: always shows editable form, pre-fills from content script if possible.
+ * Jobs mode: same as before.
  */
 
-const DEFAULT_API_URL = 'https://switch-faang.vercel.app';
-
-let extractedJobs = [];
-let extractedProfile = null;
-let emailGuesses = [];
+const DEFAULT_API_URL = "https://switch-faang.vercel.app";
 
 // Load settings
-chrome.storage.sync.get(['apiUrl'], (result) => {
-  const apiUrl = result.apiUrl || DEFAULT_API_URL;
-  document.getElementById('api-url').value = apiUrl;
+chrome.storage.sync.get(["apiUrl"], (result) => {
+  document.getElementById("api-url").value = result.apiUrl || DEFAULT_API_URL;
 });
 
 // Save settings
-document.getElementById('save-settings').addEventListener('click', () => {
-  const apiUrl = document.getElementById('api-url').value.trim() || DEFAULT_API_URL;
+document.getElementById("save-settings").addEventListener("click", () => {
+  const apiUrl = document.getElementById("api-url").value.trim() || DEFAULT_API_URL;
   chrome.storage.sync.set({ apiUrl }, () => {
-    document.getElementById('save-settings').textContent = 'Saved!';
-    setTimeout(() => {
-      document.getElementById('save-settings').textContent = 'Save Settings';
-    }, 1500);
+    const btn = document.getElementById("save-settings");
+    btn.textContent = "Saved!";
+    setTimeout(() => { btn.textContent = "Save Settings"; }, 1500);
   });
 });
 
 // Check current page type
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
   const tab = tabs[0];
-  const url = tab?.url || '';
+  const url = tab?.url || "";
 
-  if (url.includes('linkedin.com/jobs')) {
-    // Jobs page mode
+  if (url.includes("linkedin.com/jobs")) {
     showJobsMode(tab);
-  } else if (url.includes('linkedin.com/in/')) {
-    // Profile page mode
+  } else if (url.includes("linkedin.com/in/")) {
     showProfileMode(tab);
   } else {
-    document.getElementById('not-linkedin').style.display = 'block';
-    document.getElementById('jobs-mode').style.display = 'none';
-    document.getElementById('profile-mode').style.display = 'none';
+    document.getElementById("not-linkedin").style.display = "block";
   }
 });
+
+// ─── Jobs Mode ───────────────────────────────────────────────────────────────
+
+let extractedJobs = [];
 
 function showJobsMode(tab) {
-  document.getElementById('not-linkedin').style.display = 'none';
-  document.getElementById('jobs-mode').style.display = 'block';
-  document.getElementById('profile-mode').style.display = 'none';
+  document.getElementById("jobs-mode").style.display = "block";
 
-  chrome.tabs.sendMessage(tab.id, { action: 'extractJobs' }, (response) => {
+  chrome.tabs.sendMessage(tab.id, { action: "extractJobs" }, (response) => {
     if (chrome.runtime.lastError) {
-      document.getElementById('job-count').textContent = '0';
-      document.getElementById('jobs-result').style.display = 'block';
-      document.getElementById('jobs-result').textContent = 'Could not read page. Try refreshing LinkedIn.';
+      document.getElementById("job-count").textContent = "0";
       return;
     }
-
     extractedJobs = response?.jobs || [];
-    document.getElementById('job-count').textContent = extractedJobs.length;
-
+    document.getElementById("job-count").textContent = extractedJobs.length;
     if (extractedJobs.length > 0) {
-      document.getElementById('save-jobs-btn').disabled = false;
+      document.getElementById("save-jobs-btn").disabled = false;
     }
   });
 }
 
-function showProfileMode(tab) {
-  document.getElementById('not-linkedin').style.display = 'none';
-  document.getElementById('jobs-mode').style.display = 'none';
-  document.getElementById('profile-mode').style.display = 'block';
-
-  chrome.tabs.sendMessage(tab.id, { action: 'extractProfile' }, (response) => {
-    if (chrome.runtime.lastError) {
-      document.getElementById('profile-info').innerHTML = '<p style="color:#f87171;">Could not read profile. Try refreshing the page.</p>';
-      return;
-    }
-
-    extractedProfile = response?.profile || null;
-    emailGuesses = response?.guesses || [];
-
-    if (!extractedProfile || !extractedProfile.name) {
-      document.getElementById('profile-info').innerHTML = '<p style="color:#888;">Could not extract profile data.</p>';
-      return;
-    }
-
-    let html = `
-      <div class="profile-card">
-        <p class="profile-name">${extractedProfile.name}</p>
-        <p class="profile-detail">${extractedProfile.title || 'No title'}</p>
-        <p class="profile-detail">${extractedProfile.company || 'No company'}</p>
-        ${extractedProfile.location ? `<p class="profile-detail">📍 ${extractedProfile.location}</p>` : ''}
-      </div>
-    `;
-
-    if (extractedProfile.emails.length > 0) {
-      html += `<div class="email-section"><p class="section-label">Found emails:</p>`;
-      extractedProfile.emails.forEach((email) => {
-        html += `<p class="email-found">✓ ${email}</p>`;
-      });
-      html += `</div>`;
-    }
-
-    if (emailGuesses.length > 0) {
-      html += `<div class="email-section"><p class="section-label">Email guesses (unverified):</p>`;
-      emailGuesses.slice(0, 4).forEach((email) => {
-        html += `<p class="email-guess">? ${email}</p>`;
-      });
-      html += `</div>`;
-    }
-
-    document.getElementById('profile-info').innerHTML = html;
-    document.getElementById('save-contact-btn').disabled = false;
-  });
-}
-
-// Save Jobs button
-document.getElementById('save-jobs-btn').addEventListener('click', async () => {
-  const btn = document.getElementById('save-jobs-btn');
-  const resultEl = document.getElementById('jobs-result');
-
+document.getElementById("save-jobs-btn").addEventListener("click", async () => {
+  const btn = document.getElementById("save-jobs-btn");
+  const resultEl = document.getElementById("jobs-result");
   btn.disabled = true;
-  btn.textContent = 'Saving...';
-  resultEl.style.display = 'none';
+  btn.textContent = "Saving...";
 
-  const apiUrl = document.getElementById('api-url').value.trim() || DEFAULT_API_URL;
+  const apiUrl = document.getElementById("api-url").value.trim() || DEFAULT_API_URL;
 
   try {
-    const response = await fetch(`${apiUrl}/api/applications/import`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
+    const res = await fetch(`${apiUrl}/api/applications/import`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ jobs: extractedJobs }),
     });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || `HTTP ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    resultEl.style.display = 'block';
-    resultEl.innerHTML = `
-      <span style="color: #4ade80;">✓ ${data.imported} imported</span>
-      ${data.skipped > 0 ? `<span style="color: #888;"> · ${data.skipped} already existed</span>` : ''}
-    `;
-
-    btn.textContent = 'Done!';
-    setTimeout(() => { btn.textContent = 'Save to Switch FAANG'; btn.disabled = false; }, 2000);
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`);
+    const data = await res.json();
+    resultEl.style.display = "block";
+    resultEl.innerHTML = `<span style="color:#4ade80;">✓ ${data.imported} imported</span>`;
+    btn.textContent = "Done!";
+    setTimeout(() => { btn.textContent = "Save to Switch FAANG"; btn.disabled = false; }, 2000);
   } catch (err) {
-    resultEl.style.display = 'block';
-    resultEl.innerHTML = `<span style="color: #f87171;">Error: ${err.message}</span>`;
-    btn.textContent = 'Save to Switch FAANG';
+    resultEl.style.display = "block";
+    resultEl.innerHTML = `<span style="color:#f87171;">Error: ${err.message}</span>`;
+    btn.textContent = "Save to Switch FAANG";
     btn.disabled = false;
   }
 });
 
-// Save Contact button
-document.getElementById('save-contact-btn').addEventListener('click', async () => {
-  const btn = document.getElementById('save-contact-btn');
-  const resultEl = document.getElementById('profile-result');
+// ─── Profile Mode ────────────────────────────────────────────────────────────
 
-  btn.disabled = true;
-  btn.textContent = 'Saving...';
-  resultEl.style.display = 'none';
+function showProfileMode(tab) {
+  document.getElementById("profile-mode").style.display = "block";
 
-  const apiUrl = document.getElementById('api-url').value.trim() || DEFAULT_API_URL;
+  // Try to pre-fill from content script (may fail — that's OK)
+  chrome.tabs.sendMessage(tab.id, { action: "extractProfile" }, (response) => {
+    if (chrome.runtime.lastError || !response?.profile) {
+      // Content script couldn't extract — form stays empty for manual input
+      // Still try to get emails from interceptor and page scan
+      loadInterceptedEmails(tab);
+      return;
+    }
 
-  // Build contact data
-  const emails = [];
+    const profile = response.profile;
+    const guesses = response.guesses || [];
 
-  // Add found emails as primary
-  if (extractedProfile.emails.length > 0) {
-    extractedProfile.emails.forEach((email, i) => {
-      emails.push({ email, type: 'work', is_primary: i === 0 });
-    });
-  } else if (emailGuesses.length > 0) {
-    // Use first guess as primary (unverified)
-    emails.push({ email: emailGuesses[0], type: 'work', is_primary: true });
+    if (profile.name) document.getElementById("contact-name").value = profile.name;
+    if (profile.company) document.getElementById("contact-company").value = profile.company;
+    if (profile.title) document.getElementById("contact-title").value = profile.title;
+
+    // Pre-fill emails (found + guesses)
+    const emails = [...(profile.emails || [])];
+    if (emails.length === 0 && guesses.length > 0) {
+      emails.push(guesses[0]);
+    }
+    if (emails.length > 0) {
+      document.getElementById("contact-emails").value = emails.join("\n");
+    }
+
+    // Auto-detect role
+    const titleLower = (profile.title || "").toLowerCase();
+    let role = "Other";
+    if (titleLower.includes("recruit") || titleLower.includes("talent sourcer")) role = "Recruiter";
+    else if (titleLower.includes("engineering manager") || titleLower.includes("eng manager")) role = "Engineering Manager";
+    else if (titleLower.includes("hiring manager")) role = "Hiring Manager";
+    else if (titleLower.includes("director")) role = "Director";
+    else if (titleLower.includes("vp") || titleLower.includes("vice president")) role = "VP";
+    else if (titleLower.includes("sourcer")) role = "Talent Sourcer";
+    else if (titleLower.includes("develop") || titleLower.includes("engineer") || titleLower.includes("sde")) role = "Software Developer";
+    document.getElementById("contact-role").value = role;
+
+    // Also load intercepted emails (might have more than what profile extraction found)
+    loadInterceptedEmails(tab);
+  });
+}
+
+// Load emails from interceptor storage + page scan
+function loadInterceptedEmails(tab) {
+  // Check chrome.storage.local for intercepted emails
+  chrome.storage.local.get(["interceptedEmails"], (result) => {
+    const intercepted = result.interceptedEmails || [];
+    if (intercepted.length > 0) {
+      mergeEmails(intercepted);
+    }
+  });
+
+  // Also try page scan via bridge
+  chrome.tabs.sendMessage(tab.id, { action: "getPageEmails" }, (response) => {
+    if (chrome.runtime.lastError) return;
+    const pageEmails = response?.emails || [];
+    if (pageEmails.length > 0) {
+      mergeEmails(pageEmails);
+    }
+  });
+}
+
+function mergeEmails(newEmails) {
+  const field = document.getElementById("contact-emails");
+  const existing = field.value.trim()
+    ? field.value.split(/[\n,]+/).map((e) => e.trim().toLowerCase()).filter(Boolean)
+    : [];
+  const merged = [...new Set([...existing, ...newEmails.map((e) => e.toLowerCase())])];
+  field.value = merged.join("\n");
+}
+
+// Save Contact
+document.getElementById("save-contact-btn").addEventListener("click", async () => {
+  const btn = document.getElementById("save-contact-btn");
+  const resultEl = document.getElementById("profile-result");
+
+  const name = document.getElementById("contact-name").value.trim();
+  const company = document.getElementById("contact-company").value.trim();
+  const title = document.getElementById("contact-title").value.trim();
+  const role = document.getElementById("contact-role").value;
+  const emailsRaw = document.getElementById("contact-emails").value.trim();
+
+  if (!name) {
+    resultEl.style.display = "block";
+    resultEl.innerHTML = '<span style="color:#f87171;">Name is required</span>';
+    return;
   }
-
-  if (emails.length === 0) {
-    resultEl.style.display = 'block';
-    resultEl.innerHTML = '<span style="color: #f87171;">No email found or guessed</span>';
-    btn.textContent = 'Save Contact';
-    btn.disabled = false;
+  if (!emailsRaw) {
+    resultEl.style.display = "block";
+    resultEl.innerHTML = '<span style="color:#f87171;">At least one email is required</span>';
     return;
   }
 
-  const contactData = {
-    name: extractedProfile.name,
-    company: extractedProfile.company || 'Unknown',
-    title: extractedProfile.title || null,
-    role: 'Recruiter',
-    notes: `LinkedIn: ${extractedProfile.linkedin_url}`,
-    emails: emails,
-  };
+  // Parse emails
+  const emails = emailsRaw
+    .split(/[\n,\s]+/)
+    .map((e) => e.trim().toLowerCase())
+    .filter((e) => e.includes("@"));
+
+  if (emails.length === 0) {
+    resultEl.style.display = "block";
+    resultEl.innerHTML = '<span style="color:#f87171;">No valid emails found</span>';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Saving...";
+  resultEl.style.display = "none";
+
+  const personalDomains = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "protonmail.com", "icloud.com", "aol.com", "live.com"];
+  const classifiedEmails = emails.map((email, i) => ({
+    email,
+    type: personalDomains.includes(email.split("@")[1]) ? "personal" : "work",
+    is_primary: i === 0,
+  }));
+
+  const apiUrl = document.getElementById("api-url").value.trim() || DEFAULT_API_URL;
+
+  // Get LinkedIn URL from active tab
+  let linkedinUrl = "";
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    linkedinUrl = tab?.url?.split("?")[0] || "";
+  } catch {}
 
   try {
-    const response = await fetch(`${apiUrl}/api/recruiters`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(contactData),
+    const res = await fetch(`${apiUrl}/api/recruiters`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        name,
+        company: company || "Unknown",
+        title: title || null,
+        role,
+        notes: linkedinUrl ? `LinkedIn: ${linkedinUrl}` : null,
+        emails: classifiedEmails,
+      }),
     });
 
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || `HTTP ${response.status}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
     }
 
-    resultEl.style.display = 'block';
-    resultEl.innerHTML = `<span style="color: #4ade80;">✓ Contact saved to Switch FAANG</span>`;
-
-    btn.textContent = 'Saved!';
-    setTimeout(() => { btn.textContent = 'Save Contact'; btn.disabled = false; }, 2000);
+    resultEl.style.display = "block";
+    resultEl.innerHTML = `<span style="color:#4ade80;">✓ Saved! (${emails.length} email${emails.length > 1 ? "s" : ""})</span>`;
+    btn.textContent = "Saved!";
+    setTimeout(() => { btn.textContent = "Save Contact to Switch FAANG"; btn.disabled = false; }, 2500);
   } catch (err) {
-    resultEl.style.display = 'block';
-    resultEl.innerHTML = `<span style="color: #f87171;">Error: ${err.message}</span>`;
-    btn.textContent = 'Save Contact';
+    resultEl.style.display = "block";
+    resultEl.innerHTML = `<span style="color:#f87171;">Error: ${err.message}</span>`;
+    btn.textContent = "Save Contact to Switch FAANG";
     btn.disabled = false;
   }
 });
