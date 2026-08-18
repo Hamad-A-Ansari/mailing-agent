@@ -1,396 +1,383 @@
 /**
- * Content script: Email Tool Capture
+ * Content script: Email Tool Capture + API Interceptor
  * 
- * Detects when SignalHire, ContactOut, Lusha, RocketReach, or similar email
- * finder tools reveal contact data on LinkedIn profiles. Injects a floating
- * "Save to Switch FAANG" button that captures the profile + revealed emails
- * and pushes to the app's API.
+ * Two-pronged approach:
+ * 1. Floating panel with paste-able email field (manual fallback)
+ * 2. XHR/Fetch interceptor that catches SignalHire/ContactOut API responses
+ *    and auto-fills the panel with captured email data
  */
 
 const APP_URL = "https://switch-faang.vercel.app";
 
-// ─── Profile extraction (reuses logic from content-profile.js) ────────────────
+// Store intercepted emails from API calls
+let interceptedEmails = [];
 
-function extractProfileData() {
-  const profile = {
-    name: "",
-    title: "",
-    company: "",
-    location: "",
-    linkedin_url: window.location.href.split("?")[0],
+// ─── API Interceptor ─────────────────────────────────────────────────────────
+// Monkey-patch XMLHttpRequest and fetch to intercept SignalHire/ContactOut responses
+
+(function setupInterceptor() {
+  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+  
+  const targetDomains = [
+    "signalhire.com",
+    "contactout.com",
+    "api.contactout.com",
+    "app.contactout.com",
+    "lusha.com",
+    "api.lusha.com",
+    "rocketreach.co",
+    "wiza.co",
+  ];
+
+  function isTargetUrl(url) {
+    return targetDomains.some((domain) => url.includes(domain));
+  }
+
+  function extractEmailsFromResponse(text, url) {
+    if (!text) return;
+    const emails = text.match(emailRegex) || [];
+    const validEmails = emails.filter(
+      (e) => !e.includes("linkedin.com") && !e.includes("example.com") && !e.includes("sentry")
+    );
+    if (validEmails.length > 0) {
+      console.log(`[Switch FAANG] Intercepted ${validEmails.length} email(s) from ${url}`);
+      validEmails.forEach((email) => {
+        if (!interceptedEmails.includes(email.toLowerCase())) {
+          interceptedEmails.push(email.toLowerCase());
+        }
+      });
+      // Auto-fill the panel if it exists
+      updatePanelEmails();
+    }
+  }
+
+  // Intercept XMLHttpRequest
+  const originalXHROpen = XMLHttpRequest.prototype.open;
+  const originalXHRSend = XMLHttpRequest.prototype.send;
+
+  XMLHttpRequest.prototype.open = function (method, url) {
+    this._sfUrl = url;
+    return originalXHROpen.apply(this, arguments);
   };
 
-  // Name — try many selectors (LinkedIn changes these frequently)
-  const nameSelectors = [
-    'h1.text-heading-xlarge',
-    'h1[class*="text-heading"]',
-    'h1[class*="artdeco-entity-lockup__title"]',
-    '.pv-text-details__left-panel h1',
-    'main section h1',
-    '.ph5 h1',
-    'main h1',
-    'h1',
-  ];
+  XMLHttpRequest.prototype.send = function () {
+    this.addEventListener("load", function () {
+      try {
+        if (this._sfUrl && isTargetUrl(this._sfUrl)) {
+          extractEmailsFromResponse(this.responseText, this._sfUrl);
+        }
+      } catch { /* ignore */ }
+    });
+    return originalXHRSend.apply(this, arguments);
+  };
+
+  // Intercept fetch
+  const originalFetch = window.fetch;
+  window.fetch = function (...args) {
+    const url = typeof args[0] === "string" ? args[0] : args[0]?.url || "";
+    
+    return originalFetch.apply(this, args).then((response) => {
+      if (isTargetUrl(url)) {
+        // Clone the response so we can read it without consuming the original
+        response.clone().text().then((text) => {
+          extractEmailsFromResponse(text, url);
+        }).catch(() => {});
+      }
+      return response;
+    });
+  };
+})();
+
+// ─── Update panel emails field ────────────────────────────────────────────────
+
+function updatePanelEmails() {
+  const emailField = document.getElementById("sf-emails");
+  if (emailField && interceptedEmails.length > 0) {
+    const existing = emailField.value.trim();
+    const existingEmails = existing ? existing.split(/[\n,]+/).map((e) => e.trim().toLowerCase()) : [];
+    const newEmails = interceptedEmails.filter((e) => !existingEmails.includes(e));
+    if (newEmails.length > 0) {
+      emailField.value = [...existingEmails.filter(Boolean), ...newEmails].join("\n");
+      // Flash the button to indicate new data
+      const btn = document.getElementById("sf-capture-action");
+      if (btn) {
+        btn.style.animation = "none";
+        btn.offsetHeight; // trigger reflow
+        btn.style.animation = "sf-pulse 0.5s ease 2";
+      }
+    }
+  }
+}
+
+// ─── Profile extraction ──────────────────────────────────────────────────────
+
+function extractProfileData() {
+  const profile = { name: "", title: "", company: "", location: "", linkedin_url: window.location.href.split("?")[0] };
+
+  // Name
+  const nameSelectors = ['h1.text-heading-xlarge', 'h1[class*="text-heading"]', 'h1[class*="artdeco"]', 'main section h1', 'main h1', 'h1'];
   for (const sel of nameSelectors) {
     const el = document.querySelector(sel);
-    if (el && el.textContent?.trim() && el.textContent.trim().length < 100) {
+    if (el && el.textContent?.trim() && el.textContent.trim().length < 80) {
       profile.name = el.textContent.trim();
       break;
     }
   }
 
-  // Title/Headline
-  const titleSelectors = [
-    '.text-body-medium[data-generated-suggestion-target]',
-    'main .text-body-medium',
-    '.ph5 .text-body-medium',
-    '.pv-text-details__left-panel .text-body-medium',
-    'div.text-body-medium',
-    'main section .text-body-medium',
-  ];
+  // Title
+  const titleSelectors = ['.text-body-medium[data-generated-suggestion-target]', 'main .text-body-medium', 'main section .text-body-medium', 'div.text-body-medium'];
   for (const sel of titleSelectors) {
     const el = document.querySelector(sel);
-    if (el && el.textContent?.trim()) {
-      profile.title = el.textContent.trim();
-      break;
-    }
+    if (el && el.textContent?.trim()) { profile.title = el.textContent.trim(); break; }
   }
 
   // Company
-  const companySelectors = [
-    'button[aria-label*="Current company"] span',
-    'a[data-field="experience_company_logo"] span',
-    '.pv-text-details__right-panel a[href*="company"] span',
-    'main a[href*="/company/"] span',
-    '.ph5 ul li button span[aria-hidden="true"]',
-  ];
+  const companySelectors = ['button[aria-label*="Current company"] span', 'main a[href*="/company/"] span', '.ph5 ul li button span[aria-hidden="true"]'];
   for (const sel of companySelectors) {
     const el = document.querySelector(sel);
-    if (el && el.textContent?.trim()) {
-      profile.company = el.textContent.trim();
-      break;
-    }
+    if (el && el.textContent?.trim()) { profile.company = el.textContent.trim(); break; }
   }
-
-  // If no company, try extracting from title ("... at Microsoft")
   if (!profile.company && profile.title) {
-    const atMatch = profile.title.match(/(?:at|@|,)\s+([^|·•,]+)/i);
-    if (atMatch) profile.company = atMatch[1].trim();
-  }
-
-  // Also try the company icon near the name section
-  if (!profile.company) {
-    const imgs = document.querySelectorAll('main img[alt]');
-    imgs.forEach((img) => {
-      const alt = img.getAttribute("alt") || "";
-      if (alt && !alt.includes("photo") && !alt.includes("profile") && alt.length < 50 && !profile.company) {
-        // This might be a company logo with the company name as alt
-        if (img.closest('a[href*="/company/"]')) {
-          profile.company = alt;
-        }
-      }
-    });
+    const m = profile.title.match(/(?:at|@|,)\s+([^|·•,]+)/i);
+    if (m) profile.company = m[1].trim();
   }
 
   // Location
-  const locationSelectors = [
-    '.text-body-small.inline.t-black--light.break-words',
-    'main .text-body-small[class*="break-words"]',
-    '.ph5 span.text-body-small',
-    '.pv-text-details__left-panel .text-body-small',
-    'main section .text-body-small',
-  ];
-  for (const sel of locationSelectors) {
+  const locSelectors = ['.text-body-small.inline.t-black--light.break-words', 'main .text-body-small[class*="break-words"]'];
+  for (const sel of locSelectors) {
     const el = document.querySelector(sel);
-    if (el && el.textContent?.trim() && !el.textContent.includes('connection') && !el.textContent.includes('follower')) {
-      profile.location = el.textContent.trim();
-      break;
-    }
+    if (el && el.textContent?.trim() && !el.textContent.includes('connection')) { profile.location = el.textContent.trim(); break; }
   }
 
   return profile;
 }
 
-// ─── Email scraping from tool overlays ────────────────────────────────────────
+// ─── Email scraping (page scan) ──────────────────────────────────────────────
 
-function scrapeRevealedEmails() {
+function scrapePageEmails() {
   const emails = new Set();
-
-  // Method 1: Find all mailto: links anywhere on the page (including shadow DOM)
-  document.querySelectorAll('a[href^="mailto:"]').forEach((el) => {
-    const email = el.href.replace("mailto:", "").split("?")[0].trim().toLowerCase();
-    if (email && email.includes("@") && !email.includes("linkedin.com")) {
-      emails.add(email);
-    }
-  });
-
-  // Method 2: Scan ALL text nodes for email patterns
-  // This catches ContactOut sidebar, SignalHire popup, etc.
   const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-  
-  // Scan the entire document body text
-  const bodyText = document.body.innerText;
-  const foundInBody = bodyText.match(emailRegex) || [];
-  foundInBody.forEach((email) => {
-    const lower = email.toLowerCase();
-    if (
-      !lower.includes("linkedin.com") &&
-      !lower.includes("licdn.com") &&
-      !lower.includes("example.com") &&
-      !lower.includes("sentry.io") &&
-      !lower.endsWith(".png") &&
-      !lower.endsWith(".jpg") &&
-      !lower.endsWith(".svg")
-    ) {
+
+  // Scan body text
+  const found = (document.body.innerText || "").match(emailRegex) || [];
+  found.forEach((e) => {
+    const lower = e.toLowerCase();
+    if (!lower.includes("linkedin.com") && !lower.includes("licdn.com") && !lower.includes("example.com") && !lower.endsWith(".png") && !lower.endsWith(".svg")) {
       emails.add(lower);
     }
   });
 
-  // Method 3: Check all iframes on the page (ContactOut sometimes uses iframes)
-  try {
-    document.querySelectorAll("iframe").forEach((iframe) => {
-      try {
-        const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-        if (iframeDoc) {
-          const iframeText = iframeDoc.body?.innerText || "";
-          const iframeEmails = iframeText.match(emailRegex) || [];
-          iframeEmails.forEach((email) => {
-            const lower = email.toLowerCase();
-            if (!lower.includes("linkedin.com") && !lower.includes("example.com")) {
-              emails.add(lower);
-            }
-          });
-        }
-      } catch { /* cross-origin iframe, skip */ }
-    });
-  } catch { /* ignore */ }
-
-  // Method 4: Check shadow DOMs (some extensions use shadow DOM)
-  try {
-    document.querySelectorAll("*").forEach((el) => {
-      if (el.shadowRoot) {
-        const shadowText = el.shadowRoot.textContent || "";
-        const shadowEmails = shadowText.match(emailRegex) || [];
-        shadowEmails.forEach((email) => {
-          const lower = email.toLowerCase();
-          if (!lower.includes("linkedin.com") && !lower.includes("example.com")) {
-            emails.add(lower);
-          }
-        });
-      }
-    });
-  } catch { /* ignore */ }
-
-  // Method 5: Check elements injected by known extensions (by class/id patterns)
-  const extensionSelectors = [
-    // ContactOut
-    '[class*="contactout"]', '[id*="contactout"]', '[class*="co-"]',
-    // SignalHire
-    '[class*="signalhire"]', '[id*="signalhire"]', '[class*="sh-"]',
-    // Lusha
-    '[class*="lusha"]', '[id*="lusha"]',
-    // RocketReach
-    '[class*="rocketreach"]', '[id*="rocketreach"]',
-    // Wiza
-    '[class*="wiza"]', '[id*="wiza"]',
-    // Generic extension panels (usually fixed/absolute positioned)
-    '[style*="position: fixed"]', '[style*="position:fixed"]',
-  ];
-
-  extensionSelectors.forEach((selector) => {
-    try {
-      document.querySelectorAll(selector).forEach((el) => {
-        const text = el.textContent || el.innerText || "";
-        const found = text.match(emailRegex) || [];
-        found.forEach((email) => {
-          const lower = email.toLowerCase();
-          if (!lower.includes("linkedin.com") && !lower.includes("example.com")) {
-            emails.add(lower);
-          }
-        });
-      });
-    } catch { /* ignore */ }
+  // Check mailto links
+  document.querySelectorAll('a[href^="mailto:"]').forEach((el) => {
+    const e = el.href.replace("mailto:", "").split("?")[0].trim().toLowerCase();
+    if (e.includes("@") && !e.includes("linkedin.com")) emails.add(e);
   });
 
   return [...emails];
 }
 
-// ─── Inject floating "Save" button ───────────────────────────────────────────
+// ─── Inject floating button + panel ──────────────────────────────────────────
 
-function injectCaptureButton() {
-  // Don't inject if already present
+function injectUI() {
   if (document.getElementById("sf-capture-btn")) return;
 
-  const btn = document.createElement("div");
-  btn.id = "sf-capture-btn";
-  btn.innerHTML = `
+  const container = document.createElement("div");
+  container.id = "sf-capture-btn";
+  container.innerHTML = `
     <button id="sf-capture-action" title="Save contact to Switch FAANG">
       <svg width="16" height="14" viewBox="0 0 39 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M15.4565 4.74223H23.5946C23.9123 4.74223 24.2275 4.75549 24.5393 4.78145C25.2866 4.84325 26.0047 4.48205 26.3786 3.83189C27.0759 2.6196 26.2799 1.08759 24.8861 0.970196C24.46 0.934358 24.0294 0.916016 23.5943 0.916016H15.5121C7.0695 0.916016 -0.0583356 7.8229 0.000359945 16.2655C0.0291433 20.4312 1.73131 24.2001 4.46517 26.9339C7.22273 29.6915 11.0331 31.3959 15.2414 31.3959H23.5943C24.0294 31.3959 24.4603 31.3776 24.8861 31.3417C26.2799 31.2241 27.0756 29.6923 26.3786 28.4801C26.0047 27.8299 25.2866 27.4687 24.5393 27.5305C24.2275 27.5565 23.912 27.5697 23.5943 27.5697H15.2414C8.85379 27.5697 3.6756 22.2976 3.82968 15.8791C3.97924 9.64811 9.2243 4.74223 15.4565 4.74223Z" fill="white"/>
-        <path d="M29.875 9.89827C29.3967 9.41798 28.8583 8.99103 28.2753 8.6287C27.8968 8.39279 27.4499 8.32308 27.0153 8.43201C26.5793 8.5415 26.2153 8.81692 25.9901 9.20803C25.8487 9.45664 25.7739 9.73601 25.7739 10.0157C25.7739 10.5891 26.068 11.1159 26.561 11.4246C28.2075 12.4527 29.1904 14.222 29.1904 16.1572C29.1904 18.0917 28.207 19.8607 26.5598 20.889C25.8002 21.3653 25.5507 22.3397 25.9918 23.1082C26.285 23.615 26.831 23.9299 27.4166 23.9299C27.7196 23.9299 28.0159 23.8458 28.2724 23.6864C30.8982 22.0587 32.4655 19.2438 32.4655 16.1572C32.4661 13.7916 31.5458 11.5691 29.875 9.89827Z" fill="#DDDFFF"/>
-        <path d="M24.7344 18.4356C23.4753 18.4356 22.4546 17.4149 22.4546 16.1558C22.4546 14.8967 23.4753 13.876 24.7344 13.876C25.9935 13.876 27.0142 14.8967 27.0142 16.1558C27.0142 17.4149 25.9935 18.4356 24.7344 18.4356Z" fill="white"/>
-        <path d="M38.833 16.1581C38.833 21.6346 35.947 26.4338 31.6134 29.1205C31.3021 29.3133 30.9584 29.403 30.6184 29.403C29.9538 29.403 29.3054 29.0562 28.9493 28.4399C28.4292 27.5346 28.7407 26.3951 29.6265 25.8398C32.8559 23.8238 35.0067 20.238 35.0067 16.1581C35.0067 12.0782 32.8559 8.48933 29.6265 6.47336C29.0328 6.10087 28.6956 5.46538 28.6956 4.81381C28.6956 4.49606 28.7791 4.17182 28.9493 3.87326C29.4885 2.93583 30.6988 2.62457 31.6168 3.19601C32.6183 3.8188 33.5427 4.5508 34.371 5.38213C37.1282 8.13941 38.833 11.9498 38.833 16.1581Z" fill="#DDDFFF"/>
+        <path d="M15.4565 4.74H23.59c.32 0 .63.01.94.04.75.06 1.47-.3 1.84-.95.7-1.21-.1-2.74-1.49-2.86-.43-.04-.86-.05-1.3-.05H15.51C7.07.92-.06 7.82 0 16.27c.03 4.16 1.73 7.93 4.47 10.67 2.75 2.76 6.56 4.46 10.77 4.46h8.35c.44 0 .87-.02 1.29-.05 1.39-.12 2.19-1.65 1.49-2.86-.37-.65-1.09-1.01-1.84-.95-.31.03-.63.04-.94.04h-8.35c-6.39 0-11.57-5.27-11.41-11.69.15-6.23 5.39-11.14 11.63-11.14Z" fill="white"/>
+        <path d="M29.88 9.9a9.5 9.5 0 0 0-1.6-1.27c-.38-.24-.83-.3-1.26-.2-.44.11-.8.39-1.03.78-.14.25-.22.53-.22.81 0 .57.29 1.1.79 1.41 1.65 1.03 2.63 2.8 2.63 4.73 0 1.93-.98 3.7-2.63 4.73-.76.48-1.01 1.45-.57 2.22.29.51.84.82 1.42.82.3 0 .6-.08.86-.24 2.63-1.63 4.19-4.44 4.19-7.53 0-2.37-.92-4.59-2.59-6.26Z" fill="#DDDFFF"/>
+        <path d="M24.73 18.44a2.28 2.28 0 1 1 0-4.56 2.28 2.28 0 0 1 0 4.56Z" fill="white"/>
+        <path d="M38.83 16.16c0 5.48-2.89 10.28-7.22 12.96-.31.19-.66.28-1 .28-.66 0-1.31-.35-1.67-.96-.52-.91-.21-2.04.67-2.6 3.23-2.02 5.38-5.6 5.38-9.68 0-4.08-2.15-7.67-5.38-9.68-.59-.37-.93-1.01-.93-1.66 0-.32.08-.64.25-.94.54-.94 1.75-1.25 2.67-.68 1 .62 1.93 1.35 2.75 2.19 2.76 2.76 4.46 6.57 4.46 10.77Z" fill="#DDDFFF"/>
       </svg>
-      <span>Save</span>
+      <span id="sf-btn-text">Save</span>
     </button>
+    <div id="sf-capture-panel" style="display:none;">
+      <div class="sf-panel-header">
+        <span>Save to Switch FAANG</span>
+        <button id="sf-panel-close">&times;</button>
+      </div>
+      <div class="sf-panel-body">
+        <div class="sf-field"><label>Name</label><input id="sf-name" type="text" placeholder="Full name" /></div>
+        <div class="sf-field"><label>Company</label><input id="sf-company" type="text" placeholder="Company" /></div>
+        <div class="sf-field"><label>Title</label><input id="sf-title" type="text" placeholder="Job title" /></div>
+        <div class="sf-field">
+          <label>Emails <span style="color:#10b981;">(auto-captured or paste here)</span></label>
+          <textarea id="sf-emails" rows="3" placeholder="Emails will auto-fill from ContactOut/SignalHire, or paste manually..."></textarea>
+        </div>
+        <div class="sf-field">
+          <label>Role</label>
+          <select id="sf-role">
+            <option value="Recruiter">Recruiter</option>
+            <option value="Software Developer">Software Developer</option>
+            <option value="Engineering Manager">Engineering Manager</option>
+            <option value="Hiring Manager">Hiring Manager</option>
+            <option value="Director">Director</option>
+            <option value="VP">VP</option>
+            <option value="Talent Sourcer">Talent Sourcer</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <button id="sf-save-contact">Save Contact</button>
+        <div id="sf-panel-status"></div>
+      </div>
+    </div>
   `;
 
-  // Styles
   const style = document.createElement("style");
   style.textContent = `
-    #sf-capture-btn {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      z-index: 999999;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    }
-    #sf-capture-action {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: linear-gradient(135deg, #10b981, #0d9488);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      padding: 10px 16px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3), 0 2px 4px rgba(0,0,0,0.2);
-      transition: all 0.2s;
-    }
-    #sf-capture-action:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4), 0 3px 6px rgba(0,0,0,0.3);
-    }
-    #sf-capture-action:active {
-      transform: translateY(0);
-    }
-    #sf-capture-action.sf-success {
-      background: linear-gradient(135deg, #22c55e, #16a34a);
-    }
-    #sf-capture-action.sf-error {
-      background: linear-gradient(135deg, #ef4444, #dc2626);
-    }
-    #sf-capture-action.sf-loading {
-      opacity: 0.7;
-      pointer-events: none;
-    }
+    #sf-capture-btn { position:fixed; bottom:24px; right:24px; z-index:2147483647; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
+    #sf-capture-action { display:flex; align-items:center; gap:6px; background:linear-gradient(135deg,#10b981,#0d9488); color:white; border:none; border-radius:10px; padding:10px 16px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.3); transition:all 0.2s; }
+    #sf-capture-action:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(16,185,129,0.4); }
+    @keyframes sf-pulse { 0%,100%{box-shadow:0 4px 12px rgba(16,185,129,0.3);} 50%{box-shadow:0 4px 20px rgba(16,185,129,0.7);} }
+    #sf-capture-panel { position:fixed; bottom:70px; right:24px; width:320px; background:#1a1a2e; border:1px solid rgba(255,255,255,0.12); border-radius:12px; box-shadow:0 20px 40px rgba(0,0,0,0.5); z-index:2147483647; overflow:hidden; }
+    .sf-panel-header { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:linear-gradient(135deg,#10b981,#0d9488); color:white; font-size:12px; font-weight:600; }
+    .sf-panel-header button { background:none; border:none; color:white; font-size:18px; cursor:pointer; }
+    .sf-panel-body { padding:12px; }
+    .sf-field { margin-bottom:8px; }
+    .sf-field label { display:block; font-size:10px; color:#999; margin-bottom:3px; }
+    .sf-field input,.sf-field textarea,.sf-field select { width:100%; padding:6px 8px; border:1px solid rgba(255,255,255,0.15); border-radius:5px; background:#0d0d1a; color:#eee; font-size:11px; outline:none; box-sizing:border-box; }
+    .sf-field input:focus,.sf-field textarea:focus { border-color:#10b981; }
+    .sf-field textarea { resize:vertical; font-family:monospace; font-size:11px; }
+    #sf-save-contact { width:100%; padding:8px; background:linear-gradient(135deg,#10b981,#0d9488); color:white; border:none; border-radius:5px; font-size:11px; font-weight:600; cursor:pointer; margin-top:4px; }
+    #sf-save-contact:hover { opacity:0.9; }
+    #sf-save-contact:disabled { opacity:0.5; }
+    #sf-panel-status { margin-top:6px; font-size:10px; text-align:center; }
   `;
   document.head.appendChild(style);
-  document.body.appendChild(btn);
+  document.body.appendChild(container);
 
-  // Click handler
-  document.getElementById("sf-capture-action").addEventListener("click", handleCapture);
+  // Event listeners
+  document.getElementById("sf-capture-action").addEventListener("click", togglePanel);
+  document.getElementById("sf-panel-close").addEventListener("click", () => {
+    document.getElementById("sf-capture-panel").style.display = "none";
+  });
+  document.getElementById("sf-save-contact").addEventListener("click", saveContact);
 }
 
-// ─── Capture and push to API ─────────────────────────────────────────────────
-
-async function handleCapture() {
-  const btn = document.getElementById("sf-capture-action");
-  btn.classList.add("sf-loading");
-  btn.querySelector("span").textContent = "Saving...";
-
-  try {
+function togglePanel() {
+  const panel = document.getElementById("sf-capture-panel");
+  if (panel.style.display === "none") {
+    // Pre-fill profile
     const profile = extractProfileData();
-    const emails = scrapeRevealedEmails();
+    document.getElementById("sf-name").value = profile.name || "";
+    document.getElementById("sf-company").value = profile.company || "";
+    document.getElementById("sf-title").value = profile.title || "";
 
-    if (!profile.name) {
-      throw new Error("Could not extract profile name");
+    // Combine intercepted + page-scraped emails
+    const pageEmails = scrapePageEmails();
+    const allEmails = [...new Set([...interceptedEmails, ...pageEmails])];
+    if (allEmails.length > 0) {
+      document.getElementById("sf-emails").value = allEmails.join("\n");
     }
 
-    if (emails.length === 0) {
-      throw new Error("No emails found on page. Make sure ContactOut/SignalHire has revealed the emails, then click Save again.");
-    }
-
-    // Determine role from title
+    // Auto-detect role
+    const t = (profile.title || "").toLowerCase();
     let role = "Other";
-    const titleLower = (profile.title || "").toLowerCase();
-    if (titleLower.includes("recruit") || titleLower.includes("talent")) role = "Recruiter";
-    else if (titleLower.includes("engineering manager") || titleLower.includes("eng manager")) role = "Engineering Manager";
-    else if (titleLower.includes("hiring manager")) role = "Hiring Manager";
-    else if (titleLower.includes("director")) role = "Director";
-    else if (titleLower.includes("vp") || titleLower.includes("vice president")) role = "VP";
-    else if (titleLower.includes("sourcer")) role = "Talent Sourcer";
-    else if (titleLower.includes("develop") || titleLower.includes("engineer") || titleLower.includes("sde") || titleLower.includes("swe")) role = "Software Developer";
+    if (t.includes("recruit") || t.includes("talent sourcer")) role = "Recruiter";
+    else if (t.includes("engineering manager") || t.includes("eng manager")) role = "Engineering Manager";
+    else if (t.includes("hiring manager")) role = "Hiring Manager";
+    else if (t.includes("director")) role = "Director";
+    else if (t.includes("vp") || t.includes("vice president")) role = "VP";
+    else if (t.includes("sourcer")) role = "Talent Sourcer";
+    else if (t.includes("develop") || t.includes("engineer") || t.includes("sde") || t.includes("swe")) role = "Software Developer";
+    document.getElementById("sf-role").value = role;
 
-    // Classify emails (company vs personal)
-    const companyDomain = profile.company
-      ? profile.company.toLowerCase().replace(/[^a-z0-9]/g, "") + ".com"
-      : "";
-    
-    const classifiedEmails = emails.map((email) => {
-      const domain = email.split("@")[1] || "";
-      const isPersonal = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "protonmail.com", "icloud.com", "aol.com"].includes(domain);
-      return {
-        email,
-        type: isPersonal ? "personal" : "company",
-      };
-    });
+    panel.style.display = "block";
+    document.getElementById("sf-panel-status").textContent = "";
+  } else {
+    panel.style.display = "none";
+  }
+}
 
-    // Get stored API key/session from extension storage
-    const storage = await chrome.storage.local.get(["apiUrl"]);
-    const apiUrl = storage.apiUrl || APP_URL;
+async function saveContact() {
+  const btn = document.getElementById("sf-save-contact");
+  const status = document.getElementById("sf-panel-status");
+  
+  const name = document.getElementById("sf-name").value.trim();
+  const company = document.getElementById("sf-company").value.trim();
+  const title = document.getElementById("sf-title").value.trim();
+  const role = document.getElementById("sf-role").value;
+  const emailsRaw = document.getElementById("sf-emails").value.trim();
 
-    // Push to API
-    const res = await fetch(`${apiUrl}/api/recruiters`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        name: profile.name,
-        company: profile.company || "Unknown",
-        title: profile.title || "",
-        role: role,
-        notes: `LinkedIn: ${profile.linkedin_url}\nCaptured via email tool on ${new Date().toLocaleDateString()}`,
-        emails: classifiedEmails,
-      }),
-    });
+  if (!name) { status.textContent = "❌ Name is required"; status.style.color = "#f87171"; return; }
+  if (!emailsRaw) { status.textContent = "❌ At least one email required"; status.style.color = "#f87171"; return; }
 
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error || `API error: ${res.status}`);
-    }
+  // Parse emails (comma, newline, or space separated)
+  const emails = emailsRaw.split(/[\n,\s]+/).map((e) => e.trim().toLowerCase()).filter((e) => e.includes("@"));
+  if (emails.length === 0) { status.textContent = "❌ No valid emails found"; status.style.color = "#f87171"; return; }
 
-    // Success
-    btn.classList.remove("sf-loading");
-    btn.classList.add("sf-success");
-    btn.querySelector("span").textContent = `Saved! (${emails.length} email${emails.length > 1 ? "s" : ""})`;
+  btn.disabled = true;
+  btn.textContent = "Saving...";
+  status.textContent = "";
 
-    setTimeout(() => {
-      btn.classList.remove("sf-success");
-      btn.querySelector("span").textContent = "Save";
-    }, 3000);
-  } catch (err) {
-    btn.classList.remove("sf-loading");
-    btn.classList.add("sf-error");
-    btn.querySelector("span").textContent = err.message || "Error";
+  // Classify emails
+  const personalDomains = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "protonmail.com", "icloud.com", "aol.com", "live.com"];
+  const classifiedEmails = emails.map((email, i) => ({
+    email,
+    type: personalDomains.includes(email.split("@")[1]) ? "personal" : "work",
+    is_primary: i === 0,
+  }));
 
-    setTimeout(() => {
-      btn.classList.remove("sf-error");
-      btn.querySelector("span").textContent = "Save";
-    }, 4000);
+  // Send via bridge (which has chrome.storage access and credentials)
+  const requestId = "req_" + Date.now();
+  
+  window.postMessage({
+    source: "sf-capture",
+    action: "saveContact",
+    requestId,
+    payload: {
+      name,
+      company: company || "Unknown",
+      title: title || null,
+      role,
+      notes: `LinkedIn: ${window.location.href.split("?")[0]}\nCaptured: ${new Date().toLocaleDateString()}`,
+      emails: classifiedEmails,
+    },
+  }, "*");
+
+  // Wait for response from bridge
+  const response = await new Promise((resolve) => {
+    const handler = (event) => {
+      if (event.data?.source === "sf-bridge" && event.data?.requestId === requestId) {
+        window.removeEventListener("message", handler);
+        resolve(event.data);
+      }
+    };
+    window.addEventListener("message", handler);
+    // Timeout after 10s
+    setTimeout(() => { window.removeEventListener("message", handler); resolve({ error: "Timeout" }); }, 10000);
+  });
+
+  if (response.error) {
+    status.textContent = `❌ ${response.error}`;
+    status.style.color = "#f87171";
+    btn.textContent = "Save Contact";
+    btn.disabled = false;
+  } else {
+    status.textContent = `✅ Saved! (${emails.length} email${emails.length > 1 ? "s" : ""})`;
+    status.style.color = "#4ade80";
+    btn.textContent = "Saved!";
+    setTimeout(() => { btn.textContent = "Save Contact"; btn.disabled = false; }, 2000);
   }
 }
 
 // ─── Initialize ──────────────────────────────────────────────────────────────
 
-// Inject the button when on a LinkedIn profile page
 if (window.location.pathname.startsWith("/in/")) {
-  // Wait a moment for the page to fully render
-  setTimeout(injectCaptureButton, 2000);
-  
-  // Also re-inject if navigating between profiles (LinkedIn SPA)
+  setTimeout(injectUI, 1500);
+
+  // Handle LinkedIn SPA navigation
   let lastUrl = window.location.href;
   const observer = new MutationObserver(() => {
     if (window.location.href !== lastUrl) {
       lastUrl = window.location.href;
+      interceptedEmails = []; // Reset for new profile
       if (window.location.pathname.startsWith("/in/")) {
-        // Remove old button and re-inject
         const old = document.getElementById("sf-capture-btn");
         if (old) old.remove();
-        setTimeout(injectCaptureButton, 2000);
+        setTimeout(injectUI, 1500);
       }
     }
   });
