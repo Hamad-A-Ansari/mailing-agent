@@ -8,6 +8,7 @@ import { z } from "zod";
 const replySchema = z.object({
   emailLogId: z.string().uuid(), // the original email to reply to
   body: z.string().min(1),
+  subject: z.string().optional(), // custom subject (defaults to Re: original)
   attachResumeId: z.string().optional(),
 });
 
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Validation failed", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { emailLogId, body, attachResumeId } = parsed.data;
+  const { emailLogId, body, subject: customSubject, attachResumeId } = parsed.data;
   const supabase = createServerSupabaseClient();
 
   // Get the original email
@@ -42,10 +43,12 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Original email not found" }, { status: 404 });
   }
 
-  // Build the reply subject (add Re: if not already present)
-  const replySubject = originalEmail.subject.startsWith("Re:")
-    ? originalEmail.subject
-    : `Re: ${originalEmail.subject}`;
+  // Build the reply subject
+  const replySubject = customSubject
+    ? customSubject
+    : originalEmail.subject.startsWith("Re:")
+      ? originalEmail.subject
+      : `Re: ${originalEmail.subject}`;
 
   // Get user SMTP settings
   const { data: settings } = await supabase
@@ -90,30 +93,48 @@ export async function POST(request: NextRequest) {
   });
 
   try {
-    // Build the quoted original message (like Gmail does)
-    const originalDate = new Date(originalEmail.sent_at).toLocaleString("en-US", {
-      weekday: "short",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-    const quotedOriginal = `\n\nOn ${originalDate}, ${smtpUser} wrote:\n> ${originalEmail.body.split("\n").join("\n> ")}`;
-    
-    const fullBody = body + quotedOriginal;
+    // Fetch the full email thread for this recruiter (all sent emails, chronological)
+    const { data: threadEmails } = await supabase
+      .from("email_logs")
+      .select("body, sent_at, to_email")
+      .eq("user_id", userId)
+      .eq("recruiter_id", originalEmail.recruiter_id)
+      .eq("status", "sent")
+      .lte("sent_at", originalEmail.sent_at) // Only emails up to and including the one we're replying to
+      .order("sent_at", { ascending: false });
 
-    // Also build HTML version for better rendering
+    // Build the full quoted thread (newest first, each quoted with ">")
+    let quotedThread = "";
+    let htmlQuotedThread = "";
+
+    for (const email of threadEmails || []) {
+      const emailDate = new Date(email.sent_at).toLocaleString("en-US", {
+        weekday: "short",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+
+      quotedThread += `\n\nOn ${emailDate}, ${smtpUser} <${smtpUser}> wrote:\n> ${email.body.split("\n").join("\n> ")}`;
+
+      htmlQuotedThread += `
+        <div class="gmail_quote" style="margin:12px 0 0 .8ex;border-left:1px solid #ccc;padding-left:1ex;">
+          <p style="color:#888;font-size:12px;margin:0 0 8px;">On ${emailDate}, ${smtpUser} &lt;${smtpUser}&gt; wrote:</p>
+          <blockquote style="margin:0;padding:0;color:#555;">
+            ${email.body.replace(/\n/g, "<br>")}
+          </blockquote>
+        </div>
+      `;
+    }
+
+    const fullBody = body + quotedThread;
+
     const htmlBody = `
-      <div>${body.replace(/\n/g, "<br>")}</div>
-      <br>
-      <div class="gmail_quote" style="margin:0 0 0 .8ex;border-left:1px solid #ccc;padding-left:1ex;">
-        <p style="color:#888;font-size:12px;">On ${originalDate}, ${smtpUser} &lt;${smtpUser}&gt; wrote:</p>
-        <blockquote style="margin:0;padding:0;color:#555;">
-          ${originalEmail.body.replace(/\n/g, "<br>")}
-        </blockquote>
-      </div>
+      <div style="font-family:sans-serif;font-size:14px;">${body.replace(/\n/g, "<br>")}</div>
+      ${htmlQuotedThread}
     `;
 
     const mailOptions: nodemailer.SendMailOptions = {

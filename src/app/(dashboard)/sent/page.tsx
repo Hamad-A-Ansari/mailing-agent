@@ -28,6 +28,7 @@ export default function SentPage() {
   const [expandedThread, setExpandedThread] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<string | null>(null); // email log ID
   const [replyBody, setReplyBody] = useState("");
+  const [replySubject, setReplySubject] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
 
   useEffect(() => {
@@ -46,7 +47,11 @@ export default function SentPage() {
       const res = await fetch("/api/send-emails/reply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ emailLogId, body: replyBody }),
+        body: JSON.stringify({
+          emailLogId,
+          body: replyBody,
+          subject: replySubject.trim() || undefined,
+        }),
       });
 
       const data = await res.json();
@@ -54,6 +59,7 @@ export default function SentPage() {
         toast.add({ title: "Follow-up sent (threaded)", type: "success" });
         setReplyingTo(null);
         setReplyBody("");
+        setReplySubject("");
         // Refresh
         const refreshRes = await fetch("/api/email-threads");
         const refreshData = await refreshRes.json();
@@ -171,8 +177,15 @@ export default function SentPage() {
                         {replyingTo === email.id && (
                           <div className="mt-3 pt-3 border-t space-y-2">
                             <p className="text-xs text-muted-foreground">
-                              Replying to this email (will appear in same thread)
+                              Replying to this email (full thread will be quoted)
                             </p>
+                            <input
+                              type="text"
+                              value={replySubject}
+                              onChange={(e) => setReplySubject(e.target.value)}
+                              placeholder={`Re: ${email.subject}`}
+                              className="w-full rounded-md border bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500/50"
+                            />
                             <textarea
                               value={replyBody}
                               onChange={(e) => setReplyBody(e.target.value)}
@@ -182,7 +195,7 @@ export default function SentPage() {
                             />
                             <div className="flex items-center gap-2 justify-end">
                               <button
-                                onClick={() => { setReplyingTo(null); setReplyBody(""); }}
+                                onClick={() => { setReplyingTo(null); setReplyBody(""); setReplySubject(""); }}
                                 className="rounded px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted transition-colors"
                               >
                                 Cancel
