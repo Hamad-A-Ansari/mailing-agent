@@ -181,11 +181,13 @@ export async function POST(request: Request) {
               mailOptions.attachments = [{ filename: resume.filename, content: resume.buffer }];
             }
 
-            await transporter.sendMail(mailOptions);
+            const sendResult = await transporter.sendMail(mailOptions);
+            const messageId = sendResult.messageId || null;
 
             await supabase.from("email_logs").insert({
               user_id: userId, recruiter_id: recruiter.id, template_id: template.id,
               subject_line_id: subjectLine.id, to_email: emailAddr, subject, body: emailBody, status: "sent",
+              message_id: messageId,
             });
 
             totalSent++;
