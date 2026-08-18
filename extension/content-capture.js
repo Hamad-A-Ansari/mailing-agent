@@ -53,33 +53,92 @@ function extractProfileData() {
     linkedin_url: window.location.href.split("?")[0],
   };
 
-  // Name
-  const nameEl = document.querySelector('h1.text-heading-xlarge') ||
-    document.querySelector('h1[class*="text-heading"]') ||
-    document.querySelector('main h1');
-  if (nameEl) profile.name = nameEl.textContent.trim();
+  // Name — try many selectors (LinkedIn changes these frequently)
+  const nameSelectors = [
+    'h1.text-heading-xlarge',
+    'h1[class*="text-heading"]',
+    'h1[class*="artdeco-entity-lockup__title"]',
+    '.pv-text-details__left-panel h1',
+    'main section h1',
+    '.ph5 h1',
+    'main h1',
+    'h1',
+  ];
+  for (const sel of nameSelectors) {
+    const el = document.querySelector(sel);
+    if (el && el.textContent?.trim() && el.textContent.trim().length < 100) {
+      profile.name = el.textContent.trim();
+      break;
+    }
+  }
 
   // Title/Headline
-  const titleEl = document.querySelector('.text-body-medium[data-generated-suggestion-target]') ||
-    document.querySelector('main .text-body-medium') ||
-    document.querySelector('div.text-body-medium');
-  if (titleEl) profile.title = titleEl.textContent.trim();
+  const titleSelectors = [
+    '.text-body-medium[data-generated-suggestion-target]',
+    'main .text-body-medium',
+    '.ph5 .text-body-medium',
+    '.pv-text-details__left-panel .text-body-medium',
+    'div.text-body-medium',
+    'main section .text-body-medium',
+  ];
+  for (const sel of titleSelectors) {
+    const el = document.querySelector(sel);
+    if (el && el.textContent?.trim()) {
+      profile.title = el.textContent.trim();
+      break;
+    }
+  }
 
   // Company
-  const companyEl = document.querySelector('button[aria-label*="Current company"] span') ||
-    document.querySelector('main a[href*="/company/"] span');
-  if (companyEl) {
-    profile.company = companyEl.textContent.trim();
-  } else if (profile.title) {
+  const companySelectors = [
+    'button[aria-label*="Current company"] span',
+    'a[data-field="experience_company_logo"] span',
+    '.pv-text-details__right-panel a[href*="company"] span',
+    'main a[href*="/company/"] span',
+    '.ph5 ul li button span[aria-hidden="true"]',
+  ];
+  for (const sel of companySelectors) {
+    const el = document.querySelector(sel);
+    if (el && el.textContent?.trim()) {
+      profile.company = el.textContent.trim();
+      break;
+    }
+  }
+
+  // If no company, try extracting from title ("... at Microsoft")
+  if (!profile.company && profile.title) {
     const atMatch = profile.title.match(/(?:at|@|,)\s+([^|·•,]+)/i);
     if (atMatch) profile.company = atMatch[1].trim();
   }
 
+  // Also try the company icon near the name section
+  if (!profile.company) {
+    const imgs = document.querySelectorAll('main img[alt]');
+    imgs.forEach((img) => {
+      const alt = img.getAttribute("alt") || "";
+      if (alt && !alt.includes("photo") && !alt.includes("profile") && alt.length < 50 && !profile.company) {
+        // This might be a company logo with the company name as alt
+        if (img.closest('a[href*="/company/"]')) {
+          profile.company = alt;
+        }
+      }
+    });
+  }
+
   // Location
-  const locEl = document.querySelector('.text-body-small.inline.t-black--light.break-words') ||
-    document.querySelector('main .text-body-small[class*="break-words"]');
-  if (locEl && !locEl.textContent.includes('connection')) {
-    profile.location = locEl.textContent.trim();
+  const locationSelectors = [
+    '.text-body-small.inline.t-black--light.break-words',
+    'main .text-body-small[class*="break-words"]',
+    '.ph5 span.text-body-small',
+    '.pv-text-details__left-panel .text-body-small',
+    'main section .text-body-small',
+  ];
+  for (const sel of locationSelectors) {
+    const el = document.querySelector(sel);
+    if (el && el.textContent?.trim() && !el.textContent.includes('connection') && !el.textContent.includes('follower')) {
+      profile.location = el.textContent.trim();
+      break;
+    }
   }
 
   return profile;

@@ -18,14 +18,16 @@ function extractProfile() {
   const nameSelectors = [
     'h1.text-heading-xlarge',
     'h1[class*="text-heading"]',
+    'h1[class*="artdeco-entity-lockup__title"]',
     '.pv-text-details__left-panel h1',
-    'main h1',
+    'main section h1',
     '.ph5 h1',
+    'main h1',
     'h1'
   ];
   for (const sel of nameSelectors) {
     const el = document.querySelector(sel);
-    if (el && el.textContent?.trim()) {
+    if (el && el.textContent?.trim() && el.textContent.trim().length < 100) {
       profile.name = el.textContent.trim();
       break;
     }
@@ -35,6 +37,7 @@ function extractProfile() {
   const titleSelectors = [
     '.text-body-medium[data-generated-suggestion-target]',
     'main .text-body-medium',
+    'main section .text-body-medium',
     '.ph5 .text-body-medium',
     '.pv-text-details__left-panel .text-body-medium',
     'div.text-body-medium',
