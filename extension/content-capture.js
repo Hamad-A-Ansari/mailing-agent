@@ -9,39 +9,6 @@
 
 const APP_URL = "https://switch-faang.vercel.app";
 
-// ─── Selectors for popular email finder tools ─────────────────────────────────
-
-const EMAIL_TOOL_SELECTORS = {
-  // SignalHire
-  signalhire: [
-    '.sh-popup-content a[href^="mailto:"]',
-    '.sh-email-item',
-    '[class*="signalhire"] a[href^="mailto:"]',
-    'div[class*="sh-"] a[href^="mailto:"]',
-  ],
-  // ContactOut
-  contactout: [
-    '.contactout-popup a[href^="mailto:"]',
-    '[class*="contactout"] a[href^="mailto:"]',
-    '.co-popup a[href^="mailto:"]',
-    'div[id*="contactout"] a[href^="mailto:"]',
-  ],
-  // Lusha
-  lusha: [
-    '[class*="lusha"] a[href^="mailto:"]',
-    '.lusha-extension a[href^="mailto:"]',
-  ],
-  // RocketReach
-  rocketreach: [
-    '[class*="rocketreach"] a[href^="mailto:"]',
-    '.rr-extension a[href^="mailto:"]',
-  ],
-  // Generic: any mailto links injected by extensions (not part of LinkedIn's own DOM)
-  generic: [
-    'a[href^="mailto:"]:not([class*="linkedin"])',
-  ],
-};
-
 // ─── Profile extraction (reuses logic from content-profile.js) ────────────────
 
 function extractProfileData() {
@@ -149,37 +116,100 @@ function extractProfileData() {
 function scrapeRevealedEmails() {
   const emails = new Set();
 
-  // Try all tool selectors
-  for (const [tool, selectors] of Object.entries(EMAIL_TOOL_SELECTORS)) {
-    for (const selector of selectors) {
-      document.querySelectorAll(selector).forEach((el) => {
-        let email = "";
-        if (el.href && el.href.startsWith("mailto:")) {
-          email = el.href.replace("mailto:", "").split("?")[0].trim();
-        } else if (el.textContent && el.textContent.includes("@")) {
-          email = el.textContent.trim();
-        }
-        if (email && email.includes("@") && !email.includes("linkedin.com")) {
-          emails.add(email.toLowerCase());
-        }
-      });
+  // Method 1: Find all mailto: links anywhere on the page (including shadow DOM)
+  document.querySelectorAll('a[href^="mailto:"]').forEach((el) => {
+    const email = el.href.replace("mailto:", "").split("?")[0].trim().toLowerCase();
+    if (email && email.includes("@") && !email.includes("linkedin.com")) {
+      emails.add(email);
     }
-  }
+  });
 
-  // Also scan page for any new email addresses (from extension overlays)
-  const allText = document.body.innerText;
-  const emailRegex = /[\w.+-]+@[\w-]+\.[\w.-]+/g;
-  const found = allText.match(emailRegex) || [];
-  found.forEach((email) => {
+  // Method 2: Scan ALL text nodes for email patterns
+  // This catches ContactOut sidebar, SignalHire popup, etc.
+  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+  
+  // Scan the entire document body text
+  const bodyText = document.body.innerText;
+  const foundInBody = bodyText.match(emailRegex) || [];
+  foundInBody.forEach((email) => {
+    const lower = email.toLowerCase();
     if (
-      !email.includes("linkedin.com") &&
-      !email.includes("licdn.com") &&
-      !email.includes("example.com") &&
-      !email.endsWith(".png") &&
-      !email.endsWith(".jpg")
+      !lower.includes("linkedin.com") &&
+      !lower.includes("licdn.com") &&
+      !lower.includes("example.com") &&
+      !lower.includes("sentry.io") &&
+      !lower.endsWith(".png") &&
+      !lower.endsWith(".jpg") &&
+      !lower.endsWith(".svg")
     ) {
-      emails.add(email.toLowerCase());
+      emails.add(lower);
     }
+  });
+
+  // Method 3: Check all iframes on the page (ContactOut sometimes uses iframes)
+  try {
+    document.querySelectorAll("iframe").forEach((iframe) => {
+      try {
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (iframeDoc) {
+          const iframeText = iframeDoc.body?.innerText || "";
+          const iframeEmails = iframeText.match(emailRegex) || [];
+          iframeEmails.forEach((email) => {
+            const lower = email.toLowerCase();
+            if (!lower.includes("linkedin.com") && !lower.includes("example.com")) {
+              emails.add(lower);
+            }
+          });
+        }
+      } catch { /* cross-origin iframe, skip */ }
+    });
+  } catch { /* ignore */ }
+
+  // Method 4: Check shadow DOMs (some extensions use shadow DOM)
+  try {
+    document.querySelectorAll("*").forEach((el) => {
+      if (el.shadowRoot) {
+        const shadowText = el.shadowRoot.textContent || "";
+        const shadowEmails = shadowText.match(emailRegex) || [];
+        shadowEmails.forEach((email) => {
+          const lower = email.toLowerCase();
+          if (!lower.includes("linkedin.com") && !lower.includes("example.com")) {
+            emails.add(lower);
+          }
+        });
+      }
+    });
+  } catch { /* ignore */ }
+
+  // Method 5: Check elements injected by known extensions (by class/id patterns)
+  const extensionSelectors = [
+    // ContactOut
+    '[class*="contactout"]', '[id*="contactout"]', '[class*="co-"]',
+    // SignalHire
+    '[class*="signalhire"]', '[id*="signalhire"]', '[class*="sh-"]',
+    // Lusha
+    '[class*="lusha"]', '[id*="lusha"]',
+    // RocketReach
+    '[class*="rocketreach"]', '[id*="rocketreach"]',
+    // Wiza
+    '[class*="wiza"]', '[id*="wiza"]',
+    // Generic extension panels (usually fixed/absolute positioned)
+    '[style*="position: fixed"]', '[style*="position:fixed"]',
+  ];
+
+  extensionSelectors.forEach((selector) => {
+    try {
+      document.querySelectorAll(selector).forEach((el) => {
+        const text = el.textContent || el.innerText || "";
+        const found = text.match(emailRegex) || [];
+        found.forEach((email) => {
+          const lower = email.toLowerCase();
+          if (!lower.includes("linkedin.com") && !lower.includes("example.com")) {
+            emails.add(lower);
+          }
+        });
+      });
+    } catch { /* ignore */ }
   });
 
   return [...emails];
@@ -271,7 +301,7 @@ async function handleCapture() {
     }
 
     if (emails.length === 0) {
-      throw new Error("No emails found — reveal emails first using SignalHire/ContactOut");
+      throw new Error("No emails found on page. Make sure ContactOut/SignalHire has revealed the emails, then click Save again.");
     }
 
     // Determine role from title
