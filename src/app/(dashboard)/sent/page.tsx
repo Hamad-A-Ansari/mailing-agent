@@ -162,7 +162,17 @@ export default function SentPage() {
                               {format(new Date(email.sentAt), "MMM d, yyyy h:mm a")}
                             </span>
                             <button
-                              onClick={() => setReplyingTo(replyingTo === email.id ? null : email.id)}
+                              onClick={() => {
+                                if (replyingTo === email.id) {
+                                  setReplyingTo(null);
+                                } else {
+                                  setReplyingTo(email.id);
+                                  // Pre-fill subject (add Re: only if not already there)
+                                  const subj = email.subject.startsWith("Re:") ? email.subject : `Re: ${email.subject}`;
+                                  setReplySubject(subj);
+                                  setReplyBody("");
+                                }
+                              }}
                               className="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-medium text-emerald-400 hover:bg-emerald-500/10 transition-colors"
                             >
                               <Reply className="h-3 w-3" />
