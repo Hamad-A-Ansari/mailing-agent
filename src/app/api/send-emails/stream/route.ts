@@ -1,7 +1,7 @@
 import { getAuthUserId } from "@/lib/auth";
 import { logActivity } from "@/lib/activity-logger";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { injectVariables } from "@/lib/email/template-engine";
+import { injectVariables, templateToHtml, templateToPlainText } from "@/lib/email/template-engine";
 import { getResumeById } from "@/lib/email/sender";
 import nodemailer from "nodemailer";
 import { z } from "zod";
@@ -174,7 +174,8 @@ export async function POST(request: Request) {
               from: process.env.SMTP_USER,
               to: emailAddr,
               subject,
-              text: emailBody,
+              text: templateToPlainText(emailBody),
+              html: templateToHtml(emailBody),
             };
 
             if (resume) {
