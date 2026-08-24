@@ -32,7 +32,7 @@ import { BulkUploadDialog } from "./bulk-upload-dialog";
 import { toast } from "@/components/ui/toast";
 import type { Recruiter, RecruiterEmail, RecruiterStatus } from "@/types/database";
 
-type RecruiterWithEmails = Recruiter & { recruiter_emails: RecruiterEmail[] };
+type RecruiterWithEmails = Recruiter & { recruiter_emails: RecruiterEmail[]; recruiter_phones?: Array<{ id: string; phone: string; label: string; is_primary: boolean }> };
 
 interface RecruiterTableProps {
   userRole: "owner" | "viewer";
@@ -212,6 +212,7 @@ export function RecruiterTable({ userRole, isDemo = false }: RecruiterTableProps
               <TableHead>Role</TableHead>
               <TableHead>Company Email</TableHead>
               <TableHead>Personal Email</TableHead>
+              <TableHead>Phone</TableHead>
               <TableHead>Status</TableHead>
               {isOwner && <TableHead className="w-[70px]">Actions</TableHead>}
             </TableRow>
@@ -232,7 +233,7 @@ export function RecruiterTable({ userRole, isDemo = false }: RecruiterTableProps
               ))
             ) : recruiters.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isOwner ? 8 : 7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={isOwner ? 9 : 8} className="text-center py-8 text-muted-foreground">
                   No recruiters found
                 </TableCell>
               </TableRow>
@@ -297,6 +298,24 @@ export function RecruiterTable({ userRole, isDemo = false }: RecruiterTableProps
                           </div>
                         ))}
                       </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {recruiter.recruiter_phones && recruiter.recruiter_phones.length > 0 ? (
+                      <div className="space-y-0.5">
+                        {recruiter.recruiter_phones.map((p: { id: string; phone: string; label: string }) => (
+                          <a
+                            key={p.id}
+                            href={`tel:${p.phone}`}
+                            className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
+                            title={`Call (${p.label})`}
+                          >
+                            📞 {p.phone}
+                          </a>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </TableCell>
                   <TableCell>

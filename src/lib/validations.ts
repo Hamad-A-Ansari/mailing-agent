@@ -10,6 +10,12 @@ export const emailEntrySchema = z.object({
   is_primary: z.boolean().default(false),
 });
 
+export const phoneEntrySchema = z.object({
+  phone: z.string().min(1, "Phone number required"),
+  label: z.string().default("mobile"), // mobile, work, personal
+  is_primary: z.boolean().default(false),
+});
+
 export const createRecruiterSchema = z.object({
   name: z.string().min(1, "Name is required"),
   company: z.string().min(1, "Company is required"),
@@ -17,6 +23,7 @@ export const createRecruiterSchema = z.object({
   role: z.string().default("Recruiter"),
   notes: z.string().optional().nullable(),
   emails: z.array(emailEntrySchema).min(1, "At least one email is required"),
+  phones: z.array(phoneEntrySchema).optional().default([]),
 });
 
 export const updateRecruiterSchema = createRecruiterSchema.partial().extend({

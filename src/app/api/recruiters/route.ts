@@ -27,7 +27,7 @@ export async function GET(request: Request) {
 
   let query = supabase
     .from("recruiters")
-    .select("*, recruiter_emails(*)", { count: "exact" })
+    .select("*, recruiter_emails(*), recruiter_phones(*)", { count: "exact" })
     .eq("user_id", userId);
 
   if (company) {
@@ -57,7 +57,7 @@ export async function GET(request: Request) {
   if (!cursor && page > 1) {
     query = supabase
       .from("recruiters")
-      .select("*, recruiter_emails(*)", { count: "exact" });
+      .select("*, recruiter_emails(*), recruiter_phones(*)", { count: "exact" });
 
     if (company) query = query.eq("company", company);
     if (status) query = query.eq("status", status);
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { name, company, title, role, notes, emails } = parsed.data;
+  const { name, company, title, role, notes, emails, phones } = parsed.data;
   const supabase = createServerSupabaseClient();
 
   // Insert recruiter
@@ -137,10 +137,21 @@ export async function POST(request: Request) {
     return Response.json({ error: emailError.message }, { status: 500 });
   }
 
-  // Fetch complete recruiter with emails
+  // Insert phone numbers (if provided)
+  if (phones && phones.length > 0) {
+    const phoneRows = phones.map((p) => ({
+      recruiter_id: recruiter.id,
+      phone: p.phone,
+      label: p.label || "mobile",
+      is_primary: p.is_primary,
+    }));
+    await supabase.from("recruiter_phones").insert(phoneRows);
+  }
+
+  // Fetch complete recruiter with emails and phones
   const { data: complete } = await supabase
     .from("recruiters")
-    .select("*, recruiter_emails(*)")
+    .select("*, recruiter_emails(*), recruiter_phones(*)")
     .eq("id", recruiter.id)
     .single();
 

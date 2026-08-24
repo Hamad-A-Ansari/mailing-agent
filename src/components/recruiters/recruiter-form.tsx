@@ -19,12 +19,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Phone } from "lucide-react";
 import type { Recruiter, RecruiterEmail } from "@/types/database";
 
 const emailSchema = z.object({
   email: z.string().email("Invalid email"),
   type: z.string(),
+  is_primary: z.boolean(),
+});
+
+const phoneSchema = z.object({
+  phone: z.string().min(1, "Phone required"),
+  label: z.string(),
   is_primary: z.boolean(),
 });
 
@@ -46,6 +52,7 @@ const formSchema = z.object({
   role: z.string(),
   notes: z.string().optional(),
   emails: z.array(emailSchema).min(1, "At least one email is required"),
+  phones: z.array(phoneSchema),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -54,7 +61,7 @@ interface RecruiterFormProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: FormValues) => Promise<void>;
-  recruiter?: Recruiter & { recruiter_emails: RecruiterEmail[] };
+  recruiter?: Recruiter & { recruiter_emails: RecruiterEmail[]; recruiter_phones?: Array<{ phone: string; label: string; is_primary: boolean }> };
 }
 
 export function RecruiterForm({
@@ -79,6 +86,11 @@ export function RecruiterForm({
             type: e.type,
             is_primary: e.is_primary,
           })),
+          phones: (recruiter.recruiter_phones || []).map((p) => ({
+            phone: p.phone,
+            label: p.label || "mobile",
+            is_primary: p.is_primary,
+          })),
         }
       : {
           name: "",
@@ -87,6 +99,7 @@ export function RecruiterForm({
           role: "Recruiter",
           notes: "",
           emails: [{ email: "", type: "work", is_primary: true }],
+          phones: [],
         },
   });
 
@@ -104,6 +117,11 @@ export function RecruiterForm({
           type: e.type,
           is_primary: e.is_primary,
         })),
+        phones: (recruiter.recruiter_phones || []).map((p) => ({
+          phone: p.phone,
+          label: p.label || "mobile",
+          is_primary: p.is_primary,
+        })),
       });
     } else {
       form.reset({
@@ -113,6 +131,7 @@ export function RecruiterForm({
         role: "Recruiter",
         notes: "",
         emails: [{ email: "", type: "work", is_primary: true }],
+        phones: [],
       });
     }
   }, [recruiter, form]);
@@ -120,6 +139,11 @@ export function RecruiterForm({
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "emails",
+  });
+
+  const { fields: phoneFields, append: appendPhone, remove: removePhone } = useFieldArray({
+    control: form.control,
+    name: "phones",
   });
 
   const handleSubmit = form.handleSubmit(async (data: FormValues) => {
@@ -259,6 +283,60 @@ export function RecruiterForm({
                 {form.formState.errors.emails.message ||
                   form.formState.errors.emails.root?.message}
               </p>
+            )}
+          </div>
+
+          {/* Phone Numbers */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium flex items-center gap-1.5">
+                <Phone className="h-3.5 w-3.5 text-emerald-400" />
+                Phone Numbers
+              </label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => appendPhone({ phone: "", label: "mobile", is_primary: phoneFields.length === 0 })}
+              >
+                <Plus className="mr-1 h-3 w-3" />
+                Add Phone
+              </Button>
+            </div>
+
+            {phoneFields.map((field, index) => (
+              <div key={field.id} className="flex items-center gap-2">
+                <Input
+                  {...form.register(`phones.${index}.phone`)}
+                  placeholder="+91 99999 99999"
+                  className="flex-1"
+                />
+                <Select
+                  value={form.watch(`phones.${index}.label`)}
+                  onValueChange={(v) => form.setValue(`phones.${index}.label`, v || "mobile")}
+                >
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mobile">Mobile</SelectItem>
+                    <SelectItem value="work">Work</SelectItem>
+                    <SelectItem value="personal">Personal</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removePhone(index)}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+
+            {phoneFields.length === 0 && (
+              <p className="text-xs text-muted-foreground">No phone numbers added.</p>
             )}
           </div>
 
