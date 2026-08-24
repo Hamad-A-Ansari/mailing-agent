@@ -17,12 +17,14 @@ import {
   Link2,
   Settings,
   CalendarClock,
+  Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Contacts", href: "/contacts", icon: Users },
+  { label: "Public HR DB", href: "/public-hr", icon: Database },
   { label: "Templates", href: "/templates", icon: FileText },
   { label: "Subject Lines", href: "/subject-lines", icon: Type },
   { label: "Resumes", href: "/resumes", icon: Paperclip },
