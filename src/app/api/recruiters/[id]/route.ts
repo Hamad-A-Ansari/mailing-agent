@@ -28,7 +28,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     );
   }
 
-  const { emails, ...recruiterFields } = parsed.data;
+  const { emails, phones, ...recruiterFields } = parsed.data;
   const supabase = createServerSupabaseClient();
 
   // Update recruiter fields if any provided
@@ -64,10 +64,26 @@ export async function PUT(request: Request, { params }: RouteParams) {
     }
   }
 
+  // Update phones if provided
+  if (phones) {
+    await supabase.from("recruiter_phones").delete().eq("recruiter_id", id);
+
+    if (phones.length > 0) {
+      const phoneRows = phones.map((p) => ({
+        recruiter_id: id,
+        phone: p.phone,
+        label: p.label || "mobile",
+        is_primary: p.is_primary,
+      }));
+
+      await supabase.from("recruiter_phones").insert(phoneRows);
+    }
+  }
+
   // Fetch updated recruiter
   const { data: updated } = await supabase
     .from("recruiters")
-    .select("*, recruiter_emails(*)")
+    .select("*, recruiter_emails(*), recruiter_phones(*)")
     .eq("id", id)
     .single();
 
