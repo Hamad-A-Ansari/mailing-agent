@@ -15,6 +15,7 @@ import {
   Search, Plus, Upload, Download, UserPlus, CheckSquare, Square, ChevronLeft, ChevronRight, Trash2, Loader2, Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PublicHRBulkUploadDialog } from "@/components/public-hr/bulk-upload-dialog";
 
 interface HREntry {
   id: string;
@@ -50,8 +51,6 @@ export default function PublicHRPage() {
   const [addLoading, setAddLoading] = useState(false);
 
   // Bulk upload state
-  const [bulkText, setBulkText] = useState("");
-  const [bulkLoading, setBulkLoading] = useState(false);
 
   const fetchEntries = useCallback(async () => {
     setLoading(true);
@@ -157,43 +156,6 @@ export default function PublicHRPage() {
       }
     } catch { toast.add({ title: "Failed", type: "error" }); }
     finally { setAddLoading(false); }
-  };
-
-  const handleBulkUpload = async () => {
-    // Parse CSV-like text: Name, Company, Role, Email1; Email2
-    const lines = bulkText.trim().split("\n").filter(Boolean);
-    const entries = lines.map((line) => {
-      const parts = line.split(",").map((p) => p.trim());
-      const name = parts[0] || "";
-      const company = parts[1] || "";
-      const role = parts[2] || "Recruiter";
-      const emails = (parts.slice(3).join(",")).split(/[;,\s]+/).map((e) => e.trim()).filter((e) => e.includes("@"));
-      return { name, company, role, emails };
-    }).filter((e) => e.name && e.company && e.emails.length > 0);
-
-    if (entries.length === 0) {
-      toast.add({ title: "No valid entries found. Format: Name, Company, Role, email1; email2", type: "error" });
-      return;
-    }
-
-    setBulkLoading(true);
-    try {
-      const res = await fetch("/api/public-hr/bulk", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entries }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.add({ title: `Uploaded ${data.inserted} entries`, type: "success" });
-        setBulkOpen(false);
-        setBulkText("");
-        fetchEntries();
-      } else {
-        toast.add({ title: "Upload failed", type: "error" });
-      }
-    } catch { toast.add({ title: "Upload failed", type: "error" }); }
-    finally { setBulkLoading(false); }
   };
 
   const handleDelete = async (id: string) => {
@@ -387,20 +349,8 @@ export default function PublicHRPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Bulk Upload Dialog (Owner only) */}
-      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader><DialogTitle>Bulk Upload to Public HR Database</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">Format: <code>Name, Company, Role, email1; email2</code> — one entry per line.</p>
-            <textarea value={bulkText} onChange={(e) => setBulkText(e.target.value)} rows={10} className="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono" placeholder="John Doe, Microsoft, Recruiter, john@microsoft.com; johndoe@gmail.com
-Jane Smith, Google, Engineering Manager, jane@google.com" />
-            <Button onClick={handleBulkUpload} disabled={bulkLoading} className="w-full">
-              {bulkLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />} Upload All
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Bulk Upload Dialog (Owner only — CSV/Excel) */}
+      <PublicHRBulkUploadDialog open={bulkOpen} onClose={() => setBulkOpen(false)} onComplete={fetchEntries} />
     </div>
   );
 }
