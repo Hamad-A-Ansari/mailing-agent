@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
-import { Mail, Send, ChevronDown, ChevronRight, Reply, Loader2, Clock } from "lucide-react";
+import { Mail, Send, ChevronDown, ChevronRight, Reply, Loader2, Clock, CalendarClock } from "lucide-react";
 
 interface EmailItem {
   id: string;
@@ -30,6 +30,12 @@ export default function SentPage() {
   const [replyBody, setReplyBody] = useState("");
   const [replySubject, setReplySubject] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
+  // Schedule follow-up state
+  const [schedulingFor, setSchedulingFor] = useState<{ emailId: string; toEmail: string; recruiterId: string; subject: string } | null>(null);
+  const [scheduleBody, setScheduleBody] = useState("");
+  const [scheduleSubject, setScheduleSubject] = useState("");
+  const [scheduleDate, setScheduleDate] = useState("");
+  const [scheduling, setScheduling] = useState(false);
 
   useEffect(() => {
     fetch("/api/email-threads")
@@ -71,6 +77,40 @@ export default function SentPage() {
       toast.add({ title: "Something went wrong", type: "error" });
     } finally {
       setSendingReply(false);
+    }
+  };
+
+  const handleScheduleFollowUp = async () => {
+    if (!schedulingFor || !scheduleBody.trim() || !scheduleDate) return;
+    setScheduling(true);
+
+    try {
+      const res = await fetch("/api/follow-ups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recruiterId: schedulingFor.recruiterId,
+          email: schedulingFor.toEmail,
+          subject: scheduleSubject || `Re: ${schedulingFor.subject}`,
+          body: scheduleBody,
+          scheduledAt: new Date(scheduleDate).toISOString(),
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast.add({ title: `Follow-up scheduled for ${format(new Date(scheduleDate), "MMM d, h:mm a")}`, type: "success" });
+        setSchedulingFor(null);
+        setScheduleBody("");
+        setScheduleSubject("");
+        setScheduleDate("");
+      } else {
+        toast.add({ title: data.error || "Failed to schedule", type: "error" });
+      }
+    } catch {
+      toast.add({ title: "Something went wrong", type: "error" });
+    } finally {
+      setScheduling(false);
     }
   };
 
@@ -178,6 +218,24 @@ export default function SentPage() {
                               <Reply className="h-3 w-3" />
                               Reply
                             </button>
+                            <button
+                              onClick={() => {
+                                const subj = email.subject.startsWith("Re:") ? email.subject : `Re: ${email.subject}`;
+                                setSchedulingFor({
+                                  emailId: email.id,
+                                  toEmail: email.toEmail,
+                                  recruiterId: thread.recruiterId,
+                                  subject: email.subject,
+                                });
+                                setScheduleSubject(subj);
+                                setScheduleBody("");
+                                setScheduleDate("");
+                              }}
+                              className="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-medium text-blue-400 hover:bg-blue-500/10 transition-colors"
+                            >
+                              <CalendarClock className="h-3 w-3" />
+                              Schedule
+                            </button>
                           </div>
                         </div>
                         <p className="text-xs font-medium text-muted-foreground">{email.subject}</p>
@@ -228,6 +286,72 @@ export default function SentPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Schedule Follow-up Modal */}
+      {schedulingFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-xl space-y-4">
+            <div className="flex items-center gap-2">
+              <CalendarClock className="h-5 w-5 text-blue-400" />
+              <h2 className="text-lg font-semibold">Schedule Follow-up</h2>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              To: {schedulingFor.toEmail}
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Subject</label>
+                <input
+                  type="text"
+                  value={scheduleSubject}
+                  onChange={(e) => setScheduleSubject(e.target.value)}
+                  className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Message</label>
+                <textarea
+                  value={scheduleBody}
+                  onChange={(e) => setScheduleBody(e.target.value)}
+                  placeholder="Write your follow-up message..."
+                  rows={5}
+                  className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm resize-y focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Send at</label>
+                <input
+                  type="datetime-local"
+                  value={scheduleDate}
+                  onChange={(e) => setScheduleDate(e.target.value)}
+                  min={new Date().toISOString().slice(0, 16)}
+                  className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 justify-end pt-2">
+              <button
+                onClick={() => { setSchedulingFor(null); setScheduleBody(""); setScheduleSubject(""); setScheduleDate(""); }}
+                className="rounded px-4 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleScheduleFollowUp}
+                disabled={scheduling || !scheduleBody.trim() || !scheduleDate}
+                className="inline-flex items-center gap-1.5 rounded bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white hover:from-blue-500 hover:to-indigo-500 transition-all disabled:opacity-50"
+              >
+                {scheduling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CalendarClock className="h-3.5 w-3.5" />}
+                Schedule
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

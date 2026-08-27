@@ -1,17 +1,31 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 /**
- * POST /api/follow-ups/send
+ * GET /api/follow-ups/send
  * Processes scheduled follow-ups that are due.
- * Call this from a cron job (e.g., Vercel Cron or external scheduler).
+ * Called by Vercel Cron every 15 minutes.
+ * Also supports POST for backward compatibility.
  * 
- * Authorization: Requires CRON_SECRET header to prevent unauthorized triggers.
+ * Authorization: Vercel sends Authorization: Bearer <CRON_SECRET>
  */
+export async function GET(request: Request) {
+  return handleCron(request);
+}
+
 export async function POST(request: Request) {
-  // Verify cron secret
-  const cronSecret = request.headers.get("x-cron-secret");
-  if (cronSecret !== process.env.CRON_SECRET && process.env.CRON_SECRET) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  return handleCron(request);
+}
+
+async function handleCron(request: Request) {
+  // Verify cron secret — Vercel sends Authorization: Bearer <secret>
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret) {
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader?.replace("Bearer ", "");
+    const legacyHeader = request.headers.get("x-cron-secret");
+    if (token !== cronSecret && legacyHeader !== cronSecret) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
   }
 
   const supabase = createServerSupabaseClient();
