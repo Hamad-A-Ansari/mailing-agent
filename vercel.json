@@ -1,12 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/follow-ups/send",
-      "schedule": "*/15 * * * *"
-    },
-    {
-      "path": "/api/cron/check-replies",
-      "schedule": "*/5 * * * *"
-    }
-  ]
-}
+{}
