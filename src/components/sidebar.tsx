@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
@@ -18,6 +19,7 @@ import {
   Settings,
   CalendarClock,
   Database,
+  Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +32,7 @@ const navItems = [
   { label: "Resumes", href: "/resumes", icon: Paperclip },
   { label: "Send", href: "/send", icon: Mail },
   { label: "Sent", href: "/sent", icon: Send },
+  { label: "Replies", href: "/replies", icon: Inbox },
   { label: "Job Search", href: "/jobs", icon: Search },
   { label: "LinkedIn Jobs", href: "/linkedin-jobs", icon: Link2 },
   { label: "Applications", href: "/applications", icon: Columns3 },
@@ -40,6 +43,29 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [unreadReplies, setUnreadReplies] = useState(0);
+
+  useEffect(() => {
+    // Fetch unread reply count for badge
+    fetch("/api/replies?filter=replies&unread=true&limit=1")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.unreadCount !== undefined) setUnreadReplies(data.unreadCount);
+      })
+      .catch(() => {});
+
+    // Poll every 60s
+    const interval = setInterval(() => {
+      fetch("/api/replies?filter=replies&unread=true&limit=1")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.unreadCount !== undefined) setUnreadReplies(data.unreadCount);
+        })
+        .catch(() => {});
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <aside className="flex h-full w-64 flex-col border-r bg-gradient-to-b from-background to-background/95">
@@ -73,7 +99,12 @@ export function Sidebar() {
               )}
             >
               <item.icon className={cn("h-4 w-4", isActive && "text-emerald-400")} />
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {item.href === "/replies" && unreadReplies > 0 && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[10px] font-bold text-white">
+                  {unreadReplies > 99 ? "99+" : unreadReplies}
+                </span>
+              )}
             </Link>
           );
         })}

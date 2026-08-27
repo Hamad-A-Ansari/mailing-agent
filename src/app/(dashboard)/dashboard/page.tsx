@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Mail, Send, Activity, Columns3, Mic, TrendingUp, ArrowUpRight } from "lucide-react";
+import { Users, Mail, Send, Activity, Columns3, Mic, TrendingUp, ArrowUpRight, Inbox, MailWarning, Percent } from "lucide-react";
 import Link from "next/link";
 import {
   AreaChart,
@@ -27,6 +27,11 @@ interface Stats {
   emailChart: Array<{ date: string; emails: number }>;
   stageChart: Array<{ stage: string; count: number }>;
   recentActivity: Array<{ id: string; action: string; created_at: string }>;
+  totalReplies: number;
+  totalBounces: number;
+  unreadReplies: number;
+  replyRate: number;
+  bounceRate: number;
 }
 
 const stageColors: Record<string, string> = {
@@ -115,6 +120,14 @@ export default function DashboardPage() {
         <StatCard icon={Activity} label="Total Sent" value={stats?.totalEmailsSent ?? 0} color="emerald" />
         <StatCard icon={Columns3} label="Applications" value={stats?.totalApplications ?? 0} color="blue" href="/applications" />
         <StatCard icon={Mic} label="Interviews" value={stats?.totalInterviews ?? 0} color="violet" href="/interview" />
+      </div>
+
+      {/* Reply Rate Analytics */}
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+        <StatCard icon={Inbox} label="Replies" value={stats?.totalReplies ?? 0} color="teal" href="/replies" />
+        <StatCard icon={MailWarning} label="Bounces" value={stats?.totalBounces ?? 0} color="emerald" href="/replies" />
+        <StatCard icon={Percent} label="Reply Rate" value={stats?.replyRate ?? 0} color="cyan" suffix="%" />
+        <StatCard icon={Percent} label="Bounce Rate" value={stats?.bounceRate ?? 0} color="emerald" suffix="%" />
       </div>
 
       {/* Charts Row */}
@@ -227,12 +240,13 @@ export default function DashboardPage() {
   );
 }
 
-function StatCard({ icon: Icon, label, value, color, href }: {
+function StatCard({ icon: Icon, label, value, color, href, suffix }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: number;
   color: string;
   href?: string;
+  suffix?: string;
 }) {
   const colorClasses: Record<string, string> = {
     emerald: "border-emerald-500/20 text-emerald-400",
@@ -249,7 +263,7 @@ function StatCard({ icon: Icon, label, value, color, href }: {
           <Icon className={`h-4 w-4 ${colorClasses[color]?.split(" ")[1] || "text-muted-foreground"}`} />
           {href && <ArrowUpRight className="h-3 w-3 text-muted-foreground" />}
         </div>
-        <p className={`text-2xl font-bold ${colorClasses[color]?.split(" ")[1] || ""}`}>{value}</p>
+        <p className={`text-2xl font-bold ${colorClasses[color]?.split(" ")[1] || ""}`}>{value}{suffix || ""}</p>
         <p className="text-[11px] text-muted-foreground mt-0.5">{label}</p>
       </CardContent>
     </Card>

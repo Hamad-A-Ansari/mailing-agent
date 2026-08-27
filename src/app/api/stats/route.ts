@@ -112,6 +112,35 @@ export async function GET() {
     .order("created_at", { ascending: false })
     .limit(10);
 
+  // --- Reply & Bounce Analytics ---
+  const { count: totalReplies } = await supabase
+    .from("email_threads")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("direction", "received")
+    .eq("is_reply", true);
+
+  const { count: totalBounces } = await supabase
+    .from("email_threads")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("is_bounce", true);
+
+  const { count: unreadReplies } = await supabase
+    .from("email_threads")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("direction", "received")
+    .eq("is_reply", true)
+    .eq("is_read", false);
+
+  // Reply rate = replies / total sent (as percentage)
+  const sent = totalEmailsSent ?? 0;
+  const replies = totalReplies ?? 0;
+  const bounces = totalBounces ?? 0;
+  const replyRate = sent > 0 ? Math.round((replies / sent) * 100) : 0;
+  const bounceRate = sent > 0 ? Math.round((bounces / sent) * 100) : 0;
+
   return Response.json({
     totalRecruiters: totalRecruiters ?? 0,
     totalEmailsSent: totalEmailsSent ?? 0,
@@ -122,5 +151,11 @@ export async function GET() {
     emailChart,
     stageChart,
     recentActivity: recentActivity || [],
+    // Reply analytics
+    totalReplies: replies,
+    totalBounces: bounces,
+    unreadReplies: unreadReplies ?? 0,
+    replyRate,
+    bounceRate,
   });
 }
