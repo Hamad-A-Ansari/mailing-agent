@@ -32,8 +32,16 @@ export async function middleware(request: NextRequest) {
   // Refresh session if expired
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Public routes that don't require auth
-  const publicPaths = ["/sign-in", "/sign-up", "/auth/callback", "/home"];
+  // Public routes that don't require auth.
+  // Cron endpoints are protected by CRON_SECRET (checked inside the route), not cookies.
+  const publicPaths = [
+    "/sign-in",
+    "/sign-up",
+    "/auth/callback",
+    "/home",
+    "/api/cron",
+    "/api/follow-ups/send",
+  ];
   const isPublicRoute = publicPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)
   );
