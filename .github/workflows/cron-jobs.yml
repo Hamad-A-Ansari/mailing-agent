@@ -15,9 +15,19 @@ jobs:
     steps:
       - name: Trigger reply sync
         run: |
-          curl -s -o /dev/null -w "%{http_code}" \
+          if [ -z "${{ secrets.APP_URL }}" ]; then
+            echo "ERROR: APP_URL secret is not set"
+            exit 1
+          fi
+          STATUS=$(curl -s -o /tmp/response.txt -w "%{http_code}" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "${{ secrets.APP_URL }}/api/cron/check-replies"
+            "${{ secrets.APP_URL }}/api/cron/check-replies")
+          echo "HTTP $STATUS"
+          cat /tmp/response.txt
+          if [ "$STATUS" != "200" ]; then
+            echo "ERROR: expected 200, got $STATUS"
+            exit 1
+          fi
 
   send-follow-ups:
     if: github.event.schedule == '*/15 * * * *' || github.event_name == 'workflow_dispatch'
@@ -25,6 +35,16 @@ jobs:
     steps:
       - name: Trigger follow-up send
         run: |
-          curl -s -o /dev/null -w "%{http_code}" \
+          if [ -z "${{ secrets.APP_URL }}" ]; then
+            echo "ERROR: APP_URL secret is not set"
+            exit 1
+          fi
+          STATUS=$(curl -s -o /tmp/response.txt -w "%{http_code}" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "${{ secrets.APP_URL }}/api/follow-ups/send"
+            "${{ secrets.APP_URL }}/api/follow-ups/send")
+          echo "HTTP $STATUS"
+          cat /tmp/response.txt
+          if [ "$STATUS" != "200" ]; then
+            echo "ERROR: expected 200, got $STATUS"
+            exit 1
+          fi
