@@ -3,6 +3,7 @@ import {
   getIMAPConfig,
   createIMAPClient,
   fetchNewMessages,
+  getHighestUid,
   type ParsedEmail,
 } from "./reader";
 import { detectBounce, isAutoReply } from "./bounce-detector";
@@ -51,9 +52,19 @@ export async function syncInbox(userId: string): Promise<SyncResult> {
       .single();
 
     const lastUid = syncState?.last_uid || 0;
+    const isFirstSync = !syncState;
 
-    // Fetch new messages
-    const messages = await fetchNewMessages(client, "INBOX", lastUid, 200);
+    // First sync: don't process the entire mailbox history (would time out).
+    // Just set the baseline to the current highest UID so future runs only
+    // process genuinely new mail.
+    if (isFirstSync) {
+      const highest = await getHighestUid(client, "INBOX");
+      await upsertSyncState(supabase, userId, "INBOX", highest, 0);
+      return result;
+    }
+
+    // Fetch new messages (small batch to stay within serverless time budget)
+    const messages = await fetchNewMessages(client, "INBOX", lastUid, 30);
 
     if (messages.length === 0) {
       // Update last_synced_at even if no new messages
@@ -239,7 +250,16 @@ export async function syncSentFolder(userId: string): Promise<number> {
       .single();
 
     const lastUid = syncState?.last_uid || 0;
-    const messages = await fetchNewMessages(client, sentFolder, lastUid, 100);
+    const isFirstSync = !syncState;
+
+    // First sync: baseline only, don't process the entire sent history.
+    if (isFirstSync) {
+      const highest = await getHighestUid(client, sentFolder);
+      await upsertSyncState(supabase, userId, sentFolder, highest, 0);
+      return 0;
+    }
+
+    const messages = await fetchNewMessages(client, sentFolder, lastUid, 30);
 
     let highestUid = lastUid;
 
