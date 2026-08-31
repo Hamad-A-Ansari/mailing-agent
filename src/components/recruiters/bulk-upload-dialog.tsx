@@ -44,6 +44,8 @@ type ColumnMapping = {
   company: string | null;
   title: string | null;
   emails: Array<{ column: string; type: "work" | "personal" }>;  // multiple email columns
+  phones: Array<{ column: string; label: "mobile" | "work" | "personal" }>;  // multiple phone columns
+  linkedin: string | null;     // linkedin url column
   notes: string | null;
 };
 
@@ -54,6 +56,8 @@ interface PreviewEntry {
   name: string;
   company: string;
   email: string;
+  phone: string;
+  linkedin: string;
   title: string;
   notes: string;
   emailValid: boolean;
@@ -81,6 +85,8 @@ export function BulkUploadDialog({
     company: null,
     title: null,
     emails: [],
+    phones: [],
+    linkedin: null,
     notes: null,
   });
   const [entries, setEntries] = useState<PreviewEntry[]>([]);
@@ -165,11 +171,20 @@ export function BulkUploadDialog({
         const primaryEmailCol = mapping.emails.find(e => row[e.column]?.trim());
         const email = primaryEmailCol ? row[primaryEmailCol.column]?.trim() : "";
 
+        // Get primary phone (first mapped phone column that has a value)
+        const primaryPhoneCol = mapping.phones.find(p => row[p.column]?.trim());
+        const phone = primaryPhoneCol ? row[primaryPhoneCol.column]?.trim() : "";
+
+        // LinkedIn URL
+        const linkedin = mapping.linkedin ? row[mapping.linkedin]?.trim() || "" : "";
+
         return {
           id: i,
           name,
           company: row[mapping.company!]?.trim() || "",
           email,
+          phone,
+          linkedin,
           title: mapping.title ? row[mapping.title]?.trim() || "" : "",
           notes: mapping.notes ? row[mapping.notes]?.trim() || "" : "",
           emailValid: email ? isValidEmail(email) : false,
@@ -239,12 +254,38 @@ export function BulkUploadDialog({
         emails.push({ email: e.email, type: "work", is_primary: true });
       }
 
+      // Build phones array from all mapped phone columns
+      const phones: Array<{ phone: string; label: string; is_primary: boolean }> = [];
+      if (row) {
+        mapping.phones.forEach((phoneMapping, idx) => {
+          const phoneVal = row[phoneMapping.column]?.trim();
+          if (phoneVal) {
+            phones.push({
+              phone: phoneVal,
+              label: phoneMapping.label,
+              is_primary: idx === 0 && phones.length === 0,
+            });
+          }
+        });
+      }
+
+      // If the user edited the phone in preview and no mapped columns produced one,
+      // use the edited value.
+      if (phones.length === 0 && e.phone) {
+        phones.push({ phone: e.phone, label: "mobile", is_primary: true });
+      }
+
+      // LinkedIn URL — prefer the (possibly edited) preview value
+      const linkedin_url = e.linkedin?.trim() || null;
+
       return {
         name: e.name,
         company: e.company,
         title: e.title || null,
+        linkedin_url,
         notes: e.notes || null,
         emails,
+        phones,
       };
     });
 
@@ -265,7 +306,7 @@ export function BulkUploadDialog({
     setHeaders([]);
     setRows([]);
     setEntries([]);
-    setMapping({ nameType: "full", name: null, firstName: null, lastName: null, company: null, title: null, emails: [], notes: null });
+    setMapping({ nameType: "full", name: null, firstName: null, lastName: null, company: null, title: null, emails: [], phones: [], linkedin: null, notes: null });
     setResults(null);
   };
 
@@ -408,6 +449,61 @@ export function BulkUploadDialog({
               )}
             </div>
 
+            {/* Phone columns */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Phone Numbers</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMapping((prev) => ({ ...prev, phones: [...prev.phones, { column: "", label: "mobile" }] }))}
+                >
+                  <Plus className="mr-1 h-3 w-3" /> Add Phone Column
+                </Button>
+              </div>
+              {mapping.phones.map((phoneMap, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <Select value={phoneMap.column || undefined} onValueChange={(v) => {
+                    const updated = [...mapping.phones];
+                    updated[idx] = { ...updated[idx], column: v as string };
+                    setMapping((prev) => ({ ...prev, phones: updated }));
+                  }}>
+                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select column" /></SelectTrigger>
+                    <SelectContent>{headers.map((h) => (<SelectItem key={h} value={h}>{h}</SelectItem>))}</SelectContent>
+                  </Select>
+                  <Select value={phoneMap.label} onValueChange={(v) => {
+                    const updated = [...mapping.phones];
+                    updated[idx] = { ...updated[idx], label: v as "mobile" | "work" | "personal" };
+                    setMapping((prev) => ({ ...prev, phones: updated }));
+                  }}>
+                    <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mobile">Mobile</SelectItem>
+                      <SelectItem value="work">Work</SelectItem>
+                      <SelectItem value="personal">Personal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    setMapping((prev) => ({ ...prev, phones: prev.phones.filter((_, i) => i !== idx) }));
+                  }}>
+                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+              {mapping.phones.length === 0 && (
+                <p className="text-xs text-muted-foreground">Optional. Click &quot;Add Phone Column&quot; to map phone columns.</p>
+              )}
+            </div>
+
+            {/* LinkedIn URL */}
+            <div className="flex items-center gap-4">
+              <span className="w-24 text-sm font-medium">LinkedIn</span>
+              <Select value={mapping.linkedin ?? undefined} onValueChange={(v) => setMapping((prev) => ({ ...prev, linkedin: v as string }))}>
+                <SelectTrigger className="w-[200px]"><SelectValue placeholder="Select column" /></SelectTrigger>
+                <SelectContent>{headers.map((h) => (<SelectItem key={h} value={h}>{h}</SelectItem>))}</SelectContent>
+              </Select>
+            </div>
+
             {/* Title */}
             <div className="flex items-center gap-4">
               <span className="w-24 text-sm font-medium">Title</span>
@@ -480,6 +576,8 @@ export function BulkUploadDialog({
                     <TableHead>Name</TableHead>
                     <TableHead>Company</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>LinkedIn</TableHead>
                     <TableHead>Title</TableHead>
                     <TableHead className="w-[80px]">Actions</TableHead>
                   </TableRow>
@@ -535,6 +633,30 @@ export function BulkUploadDialog({
                               <Badge variant="secondary" className="text-[10px] px-1">exists</Badge>
                             )}
                           </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {entry.editing ? (
+                          <Input
+                            value={entry.phone}
+                            onChange={(e) => updateEntry(entry.id, "phone", e.target.value)}
+                            className="h-7 text-xs"
+                          />
+                        ) : (
+                          <span className="text-sm">{entry.phone || "—"}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {entry.editing ? (
+                          <Input
+                            value={entry.linkedin}
+                            onChange={(e) => updateEntry(entry.id, "linkedin", e.target.value)}
+                            className="h-7 text-xs"
+                          />
+                        ) : (
+                          <span className="text-xs truncate max-w-[140px] inline-block align-middle">
+                            {entry.linkedin || "—"}
+                          </span>
                         )}
                       </TableCell>
                       <TableCell>

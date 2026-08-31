@@ -7,6 +7,7 @@ const bulkRecruiterSchema = z.object({
   name: z.string().min(1),
   company: z.string().min(1),
   title: z.string().optional().nullable(),
+  linkedin_url: z.string().optional().nullable(),
   emails: z
     .array(
       z.object({
@@ -16,6 +17,16 @@ const bulkRecruiterSchema = z.object({
       })
     )
     .min(1),
+  phones: z
+    .array(
+      z.object({
+        phone: z.string().min(1),
+        label: z.string(),
+        is_primary: z.boolean(),
+      })
+    )
+    .optional()
+    .default([]),
   notes: z.string().optional().nullable(),
 });
 
@@ -62,6 +73,7 @@ export async function POST(request: Request) {
           name: recruiter.name,
           company: recruiter.company,
           title: recruiter.title || null,
+          linkedin_url: recruiter.linkedin_url || null,
           notes: recruiter.notes || null,
         })
         .select()
@@ -91,6 +103,17 @@ export async function POST(request: Request) {
         results.failed++;
         results.errors.push({ row: i + 1, message: emailError.message });
         continue;
+      }
+
+      // Insert phone numbers (if provided)
+      if (recruiter.phones && recruiter.phones.length > 0) {
+        const phoneRows = recruiter.phones.map((p) => ({
+          recruiter_id: created.id,
+          phone: p.phone,
+          label: p.label || "mobile",
+          is_primary: p.is_primary,
+        }));
+        await supabase.from("recruiter_phones").insert(phoneRows);
       }
 
       results.inserted++;
