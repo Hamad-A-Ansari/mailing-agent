@@ -105,13 +105,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const { name, company, title, role, notes, emails, phones } = parsed.data;
+  const { name, company, title, role, notes, linkedin_url, emails, phones } = parsed.data;
   const supabase = createServerSupabaseClient();
 
   // Insert recruiter
   const { data: recruiter, error: recruiterError } = await supabase
     .from("recruiters")
-    .insert({ user_id: userId, name, company, title, role: role || "Recruiter", notes })
+    .insert({ user_id: userId, name, company, title, role: role || "Recruiter", notes, linkedin_url: linkedin_url || null })
     .select()
     .single();
 
