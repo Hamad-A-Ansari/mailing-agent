@@ -20,6 +20,7 @@ import {
   CalendarClock,
   Database,
   Inbox,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,7 @@ const navItems = [
   { label: "Contacts", href: "/contacts", icon: Users },
   { label: "Public HR DB", href: "/public-hr", icon: Database },
   { label: "Templates", href: "/templates", icon: FileText },
+  { label: "DM Templates", href: "/dm-templates", icon: MessageSquare },
   { label: "Subject Lines", href: "/subject-lines", icon: Type },
   { label: "Resumes", href: "/resumes", icon: Paperclip },
   { label: "Send", href: "/send", icon: Mail },

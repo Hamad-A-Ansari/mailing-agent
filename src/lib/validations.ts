@@ -44,6 +44,18 @@ export const createTemplateSchema = z.object({
 export const updateTemplateSchema = createTemplateSchema.partial();
 
 // ============================================================
+// DM Template Schemas (LinkedIn)
+// ============================================================
+
+export const createDmTemplateSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  category: z.enum(["connection", "inmail", "follow-up", "referral"]),
+  body: z.string().min(1, "Body is required"),
+});
+
+export const updateDmTemplateSchema = createDmTemplateSchema.partial();
+
+// ============================================================
 // Subject Line Schemas
 // ============================================================
 

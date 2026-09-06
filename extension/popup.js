@@ -89,6 +89,9 @@ document.getElementById("save-jobs-btn").addEventListener("click", async () => {
 function showProfileMode(tab) {
   document.getElementById("profile-mode").style.display = "block";
 
+  // Load DM templates from the app (independent of profile extraction)
+  loadDmTemplates();
+
   // Try to pre-fill from content script (may fail — that's OK)
   chrome.tabs.sendMessage(tab.id, { action: "extractProfile" }, (response) => {
     if (chrome.runtime.lastError || !response?.profile) {
@@ -159,6 +162,138 @@ function mergeEmails(newEmails) {
   const merged = [...new Set([...existing, ...newEmails.map((e) => e.toLowerCase())])];
   field.value = merged.join("\n");
 }
+
+// ─── DM Templates ──────────────────────────────────────────────────────────
+
+let dmTemplates = [];
+
+function getProfileVars() {
+  const name = document.getElementById("contact-name").value.trim();
+  const company = document.getElementById("contact-company").value.trim();
+  const title = document.getElementById("contact-title").value.trim();
+  const role = document.getElementById("contact-role").value || "";
+  const firstName = name.split(/\s+/)[0] || "";
+  return { name, firstName, company, title, role };
+}
+
+// Replace {{var}} placeholders with profile values. Unknown vars left blank.
+function fillTemplate(body, vars) {
+  return body.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, key) => {
+    const v = vars[key];
+    return v !== undefined && v !== null ? String(v) : "";
+  });
+}
+
+function renderDmPreview() {
+  const select = document.getElementById("dm-template");
+  const preview = document.getElementById("dm-preview");
+  const copyBtn = document.getElementById("dm-copy-btn");
+  const templateId = select.value;
+
+  if (!templateId) {
+    preview.textContent = "";
+    copyBtn.disabled = true;
+    return;
+  }
+
+  const template = dmTemplates.find((t) => t.id === templateId);
+  if (!template) {
+    preview.textContent = "";
+    copyBtn.disabled = true;
+    return;
+  }
+
+  const filled = fillTemplate(template.body, getProfileVars());
+  preview.textContent = filled;
+  copyBtn.disabled = false;
+}
+
+function populateDmDropdown() {
+  const categorySel = document.getElementById("dm-category");
+  const templateSel = document.getElementById("dm-template");
+  const emptyMsg = document.getElementById("dm-empty");
+  const category = categorySel.value;
+
+  const filtered = category === "all"
+    ? dmTemplates
+    : dmTemplates.filter((t) => t.category === category);
+
+  templateSel.innerHTML = "";
+
+  if (filtered.length === 0) {
+    templateSel.innerHTML = '<option value="">No templates</option>';
+    emptyMsg.style.display = dmTemplates.length === 0 ? "block" : "none";
+    document.getElementById("dm-preview").textContent = "";
+    document.getElementById("dm-copy-btn").disabled = true;
+    return;
+  }
+
+  emptyMsg.style.display = "none";
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Select a template...";
+  templateSel.appendChild(placeholder);
+
+  filtered.forEach((t) => {
+    const opt = document.createElement("option");
+    opt.value = t.id;
+    opt.textContent = t.name;
+    templateSel.appendChild(opt);
+  });
+
+  renderDmPreview();
+}
+
+async function loadDmTemplates() {
+  const apiUrl = document.getElementById("api-url").value.trim() || DEFAULT_API_URL;
+  const templateSel = document.getElementById("dm-template");
+  try {
+    const res = await fetch(`${apiUrl}/api/dm-templates`, {
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    dmTemplates = data.templates || [];
+    populateDmDropdown();
+  } catch (err) {
+    templateSel.innerHTML = '<option value="">Sign in to Switch FAANG first</option>';
+    document.getElementById("dm-empty").style.display = "none";
+  }
+}
+
+// Wire up DM template events
+document.getElementById("dm-category").addEventListener("change", populateDmDropdown);
+document.getElementById("dm-template").addEventListener("change", renderDmPreview);
+
+// Re-render preview when profile fields change (so variables update live)
+["contact-name", "contact-company", "contact-title", "contact-role"].forEach((id) => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener("input", renderDmPreview);
+  if (el && el.tagName === "SELECT") el.addEventListener("change", renderDmPreview);
+});
+
+document.getElementById("dm-copy-btn").addEventListener("click", async () => {
+  const preview = document.getElementById("dm-preview");
+  const resultEl = document.getElementById("dm-result");
+  const btn = document.getElementById("dm-copy-btn");
+  const text = preview.textContent || "";
+  if (!text) return;
+
+  try {
+    await navigator.clipboard.writeText(text);
+    const original = btn.textContent;
+    btn.textContent = "Copied!";
+    resultEl.style.display = "block";
+    resultEl.innerHTML = '<span style="color:#4ade80;">✓ Copied — paste into LinkedIn DM</span>';
+    setTimeout(() => {
+      btn.textContent = original;
+      resultEl.style.display = "none";
+    }, 2000);
+  } catch {
+    resultEl.style.display = "block";
+    resultEl.innerHTML = '<span style="color:#f87171;">Copy failed</span>';
+  }
+});
 
 // Save Contact
 document.getElementById("save-contact-btn").addEventListener("click", async () => {

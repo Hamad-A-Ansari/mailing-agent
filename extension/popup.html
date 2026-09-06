@@ -84,6 +84,26 @@
     /* Jobs mode */
     .job-count { font-size: 22px; font-weight: 700; text-align: center; margin: 8px 0 2px; }
     .job-label { font-size: 11px; color: #888; text-align: center; margin-bottom: 10px; }
+
+    /* DM Templates section */
+    .dm-section { margin-top: 12px; padding-top: 10px; border-top: 1px solid #2a2a3a; }
+    .dm-section .section-title {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+      color: #10b981; font-weight: 600; margin-bottom: 8px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .dm-preview {
+      margin-top: 8px; padding: 9px; border-radius: 6px;
+      background: #0a0a14; border: 1px solid #2a2a3a;
+      font-size: 11px; line-height: 1.5; color: #ccc;
+      white-space: pre-wrap; max-height: 140px; overflow-y: auto;
+    }
+    .dm-preview:empty { display: none; }
+    .btn-row { display: flex; gap: 6px; margin-top: 6px; }
+    .btn-row button { flex: 1; }
+    button.copy-btn { background: #10b98122; color: #10b981; border: 1px solid #10b98144; }
+    button.copy-btn:hover { background: #10b98133; }
+    .dm-empty { font-size: 10px; color: #666; margin-top: 6px; text-align: center; }
   </style>
 </head>
 <body>
@@ -150,6 +170,35 @@
 
     <button class="primary" id="save-contact-btn">Save Contact to Switch FAANG</button>
     <div id="profile-result" class="result" style="display:none;"></div>
+
+    <!-- DM Templates -->
+    <div class="dm-section">
+      <div class="section-title">
+        <span>LinkedIn DM Templates</span>
+      </div>
+      <div class="form-group">
+        <select id="dm-category">
+          <option value="all">All categories</option>
+          <option value="connection">Connection Request</option>
+          <option value="inmail">InMail</option>
+          <option value="follow-up">Follow-up</option>
+          <option value="referral">Referral</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <select id="dm-template">
+          <option value="">Loading templates...</option>
+        </select>
+      </div>
+      <div class="dm-preview" id="dm-preview"></div>
+      <div class="btn-row">
+        <button class="copy-btn" id="dm-copy-btn" disabled>Copy Message</button>
+      </div>
+      <div class="dm-empty" id="dm-empty" style="display:none;">
+        No templates. Create some in the DM Templates section of Switch FAANG.
+      </div>
+      <div id="dm-result" class="result" style="display:none;"></div>
+    </div>
   </div>
 
   <!-- Settings -->
