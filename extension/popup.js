@@ -175,13 +175,27 @@ function mergeEmails(newEmails) {
 
 let dmTemplates = [];
 
+// Read template variables from the DM section's own inputs.
 function getProfileVars() {
-  const name = document.getElementById("contact-name").value.trim();
-  const company = document.getElementById("contact-company").value.trim();
-  const title = document.getElementById("contact-title").value.trim();
-  const role = document.getElementById("contact-role").value || "";
-  const firstName = name.split(/\s+/)[0] || "";
-  return { name, firstName, company, title, role };
+  const firstName = document.getElementById("dm-first-name").value.trim();
+  const company = document.getElementById("dm-company").value.trim();
+  // name = firstName here (recipient inbox often only gives us a first name);
+  // title/role aren't collected in the messaging view.
+  return { name: firstName, firstName, company, title: "", role: "" };
+}
+
+// When on a profile page, auto-fill the DM recipient fields from the scrape.
+function prefillDmRecipient(tab) {
+  chrome.tabs.sendMessage(tab.id, { action: "extractProfile" }, (response) => {
+    if (chrome.runtime.lastError || !response?.profile) return;
+    const p = response.profile;
+    if (p.name) {
+      const first = p.name.split(/\s+/)[0] || "";
+      document.getElementById("dm-first-name").value = first;
+    }
+    if (p.company) document.getElementById("dm-company").value = p.company;
+    renderDmPreview();
+  });
 }
 
 // Replace {{var}} placeholders with profile values. Unknown vars left blank.
@@ -273,11 +287,10 @@ async function loadDmTemplates() {
 document.getElementById("dm-category").addEventListener("change", populateDmDropdown);
 document.getElementById("dm-template").addEventListener("change", renderDmPreview);
 
-// Re-render preview when profile fields change (so variables update live)
-["contact-name", "contact-company", "contact-title", "contact-role"].forEach((id) => {
+// Re-render preview when recipient fields change (so variables update live)
+["dm-first-name", "dm-company"].forEach((id) => {
   const el = document.getElementById(id);
   if (el) el.addEventListener("input", renderDmPreview);
-  if (el && el.tagName === "SELECT") el.addEventListener("change", renderDmPreview);
 });
 
 document.getElementById("dm-copy-btn").addEventListener("click", async () => {

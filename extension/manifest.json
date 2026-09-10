@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Switch FAANG - LinkedIn Job Saver",
-  "version": "1.3.0",
-  "description": "Save LinkedIn jobs and recruiter contacts, plus fill DM templates, directly from Switch FAANG",
+  "version": "1.4.0",
+  "description": "Save LinkedIn jobs and recruiter contacts, plus DM templates always available, directly from Switch FAANG",
   "permissions": ["activeTab", "storage", "tabs"],
   "host_permissions": ["https://switch-faang.vercel.app/*", "https://www.linkedin.com/*"],
   "action": {
