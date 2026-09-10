@@ -170,32 +170,52 @@
 
     <button class="primary" id="save-contact-btn">Save Contact to Switch FAANG</button>
     <div id="profile-result" class="result" style="display:none;"></div>
+  </div>
 
-    <!-- DM Templates -->
-    <div class="dm-section">
+  <!-- DM Templates — always visible on any LinkedIn page -->
+  <div id="dm-mode" style="display:none;">
+    <div class="dm-section" style="border-top:none; padding-top:0; margin-top:0;">
       <div class="section-title">
         <span>LinkedIn DM Templates</span>
       </div>
-      <div class="form-group">
-        <select id="dm-category">
-          <option value="all">All categories</option>
-          <option value="connection">Connection Request</option>
-          <option value="inmail">InMail</option>
-          <option value="follow-up">Follow-up</option>
-          <option value="referral">Referral</option>
-        </select>
+
+      <!-- Recipient — auto-filled on profiles, editable everywhere -->
+      <div class="row">
+        <div class="form-group">
+          <label>Recipient First Name</label>
+          <input type="text" id="dm-first-name" placeholder="e.g. Kartik" />
+        </div>
+        <div class="form-group">
+          <label>Company</label>
+          <input type="text" id="dm-company" placeholder="e.g. Deloitte" />
+        </div>
       </div>
-      <div class="form-group">
-        <select id="dm-template">
-          <option value="">Loading templates...</option>
-        </select>
+
+      <div class="row">
+        <div class="form-group">
+          <label>Category</label>
+          <select id="dm-category">
+            <option value="all">All categories</option>
+            <option value="connection">Connection Request</option>
+            <option value="inmail">InMail</option>
+            <option value="follow-up">Follow-up</option>
+            <option value="referral">Referral</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Template</label>
+          <select id="dm-template">
+            <option value="">Loading templates...</option>
+          </select>
+        </div>
       </div>
+
       <div class="dm-preview" id="dm-preview"></div>
       <div class="btn-row">
         <button class="copy-btn" id="dm-copy-btn" disabled>Copy Message</button>
       </div>
       <div class="dm-empty" id="dm-empty" style="display:none;">
-        No templates. Create some in the DM Templates section of Switch FAANG.
+        No templates yet. Create some in the DM Templates section of Switch FAANG.
       </div>
       <div id="dm-result" class="result" style="display:none;"></div>
     </div>

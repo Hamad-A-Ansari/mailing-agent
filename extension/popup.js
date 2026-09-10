@@ -25,13 +25,24 @@ document.getElementById("save-settings").addEventListener("click", () => {
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
   const tab = tabs[0];
   const url = tab?.url || "";
+  const onLinkedIn = url.includes("linkedin.com");
 
   if (url.includes("linkedin.com/jobs")) {
     showJobsMode(tab);
   } else if (url.includes("linkedin.com/in/")) {
     showProfileMode(tab);
-  } else {
+  } else if (!onLinkedIn) {
     document.getElementById("not-linkedin").style.display = "block";
+  }
+
+  // DM template library is available on ANY LinkedIn page (messaging, feed, search, etc.)
+  if (onLinkedIn) {
+    document.getElementById("dm-mode").style.display = "block";
+    loadDmTemplates();
+    // If we're on a profile, try to pre-fill the recipient from the page
+    if (url.includes("linkedin.com/in/")) {
+      prefillDmRecipient(tab);
+    }
   }
 });
 
@@ -88,9 +99,6 @@ document.getElementById("save-jobs-btn").addEventListener("click", async () => {
 
 function showProfileMode(tab) {
   document.getElementById("profile-mode").style.display = "block";
-
-  // Load DM templates from the app (independent of profile extraction)
-  loadDmTemplates();
 
   // Try to pre-fill from content script (may fail — that's OK)
   chrome.tabs.sendMessage(tab.id, { action: "extractProfile" }, (response) => {
