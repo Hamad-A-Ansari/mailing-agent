@@ -41,6 +41,7 @@ export async function middleware(request: NextRequest) {
     "/home",
     "/api/cron",
     "/api/follow-ups/send",
+    "/api/track",
   ];
   const isPublicRoute = publicPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)

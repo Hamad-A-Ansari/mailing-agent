@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getCurrentUserId } from "@/lib/supabase/auth-server";
+import { TrackBeacon } from "@/components/track-beacon";
 import {
   Mail,
   Mic,
@@ -21,6 +22,8 @@ export default async function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {/* Anonymous visitor tracking — landing page only */}
+      <TrackBeacon />
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 border-b bg-background/80 backdrop-blur-lg">
         <div className="mx-auto flex h-14 sm:h-16 max-w-6xl items-center justify-between px-4 sm:px-6">

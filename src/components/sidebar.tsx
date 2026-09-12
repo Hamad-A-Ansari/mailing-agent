@@ -21,6 +21,7 @@ import {
   Database,
   Inbox,
   MessageSquare,
+  Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +41,7 @@ const navItems = [
   { label: "Applications", href: "/applications", icon: Columns3 },
   { label: "Activity", href: "/activity", icon: Activity },
   { label: "Follow-ups", href: "/follow-ups", icon: CalendarClock },
+  { label: "Visitors", href: "/visitors", icon: Eye },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
