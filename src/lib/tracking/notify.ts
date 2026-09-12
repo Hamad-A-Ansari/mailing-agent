@@ -56,8 +56,9 @@ async function getOwnerTransporter(): Promise<{
 
 /**
  * Send a visit notification email to the owner.
+ * `source` labels which site the visit came from (e.g. "portfolio", "landing").
  */
-export async function notifyVisit(info: VisitorInfo): Promise<boolean> {
+export async function notifyVisit(info: VisitorInfo, source = "landing"): Promise<boolean> {
   const setup = await getOwnerTransporter();
   if (!setup) return false;
 
@@ -70,9 +71,11 @@ export async function notifyVisit(info: VisitorInfo): Promise<boolean> {
       ? `https://www.google.com/maps?q=${info.latitude},${info.longitude}`
       : null;
 
-  const subject = `Portfolio visit: ${org} · ${location}`;
+  const siteLabel = source === "portfolio" ? "Portfolio" : source === "landing" ? "Switch FAANG" : source;
+  const subject = `${siteLabel} visit: ${org} · ${location}`;
 
   const rows: Array<[string, string]> = [
+    ["Site", siteLabel],
     ["Organization / Company", org],
     ["ISP", info.isp || "—"],
     ["Location", location],

@@ -42,6 +42,7 @@ interface Visit {
   as_name: string | null;
   latitude: number | null;
   longitude: number | null;
+  source: string | null;
   created_at: string;
 }
 
@@ -158,6 +159,7 @@ export default function VisitorsPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Site</TableHead>
                 <TableHead>Organization</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Device</TableHead>
@@ -169,6 +171,18 @@ export default function VisitorsPage() {
             <TableBody>
               {visits.map((v) => (
                 <TableRow key={v.id}>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={
+                        v.source === "portfolio"
+                          ? "text-[10px] bg-violet-500/15 text-violet-400 border-violet-500/30"
+                          : "text-[10px] bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                      }
+                    >
+                      {v.source === "portfolio" ? "Portfolio" : "Landing"}
+                    </Badge>
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1.5">
                       <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
