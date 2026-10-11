@@ -7,13 +7,15 @@ import { createClient } from "@supabase/supabase-js";
  */
 export function createBrowserSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!supabaseUrl) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL environment variable");
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable"
+    );
   }
 
   // Note: For this app, we primarily use server-side Supabase client.
   // The browser client is a lightweight instance for any future client-side needs.
-  return createClient(supabaseUrl, supabaseUrl);
+  return createClient(supabaseUrl, supabaseAnonKey);
 }
