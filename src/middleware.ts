@@ -37,6 +37,8 @@ export async function middleware(request: NextRequest) {
   const publicPaths = [
     "/sign-in",
     "/sign-up",
+    "/forgot-password",
+    "/reset-password",
     "/auth/callback",
     "/home",
     "/api/cron",
