@@ -12,6 +12,8 @@ import { getCurrentUserId } from "@/lib/supabase/auth-server";
 const DEFAULT_ALLOWED_ORIGINS = [
   "https://switch-faang.vercel.app",
   "https://hamadansari.vercel.app",
+  "https://hamadansari.com",
+  "https://www.hamadansari.com",
 ];
 
 /** Stop runaway clients from flooding the table/inbox from a single session. */
